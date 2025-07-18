@@ -1,0 +1,59 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const http_1 = require("http");
+const app_1 = __importDefault(require("./app"));
+const config_1 = require("../config");
+const database_1 = require("../config/database");
+const ChatService_1 = require("../services/ChatService");
+const logger_1 = require("./logger");
+const startServer = async () => {
+    try {
+        await (0, database_1.initializeDatabase)();
+        const server = (0, http_1.createServer)(app_1.default);
+        new ChatService_1.ChatService(server, database_1.database);
+        server.listen(config_1.config.server.port, config_1.config.server.host, () => {
+            logger_1.logger.info(`🚀 Flight Search SaaS server running on http://${config_1.config.server.host}:${config_1.config.server.port}`);
+            logger_1.logger.info(`📊 Environment: ${config_1.config.server.nodeEnv}`);
+            logger_1.logger.info(`🔗 API Base URL: http://${config_1.config.server.host}:${config_1.config.server.port}${config_1.config.api.prefix}`);
+            logger_1.logger.info(`💬 WebSocket server ready at ws://${config_1.config.server.host}:${config_1.config.server.port}/socket.io`);
+        });
+        const gracefulShutdown = async (signal) => {
+            logger_1.logger.info(`🛑 Received ${signal}. Starting graceful shutdown...`);
+            server.close(async () => {
+                logger_1.logger.info('📴 HTTP server closed');
+                try {
+                    await (0, database_1.closeDatabase)();
+                    logger_1.logger.info('✅ Graceful shutdown completed');
+                    process.exit(0);
+                }
+                catch (error) {
+                    logger_1.logger.error('❌ Error during shutdown:', error);
+                    process.exit(1);
+                }
+            });
+            setTimeout(() => {
+                logger_1.logger.error('⚠️  Forced shutdown after timeout');
+                process.exit(1);
+            }, 30000);
+        };
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        process.on('uncaughtException', (error) => {
+            logger_1.logger.error('💥 Uncaught Exception:', error);
+            process.exit(1);
+        });
+        process.on('unhandledRejection', (reason, promise) => {
+            logger_1.logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+            process.exit(1);
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+startServer();
+//# sourceMappingURL=server.js.map
