@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Application service for testing
+  app:
+    build:
+      context: .
+      target: test
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/flight_search_test
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=test-secret-key
+      - REQUESTY_API_KEY=test-api-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service for testing
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    ports:
+      - "3001:3000"
+    environment:
+      - REACT_APP_API_URL=http://app:3000/api
+      - REACT_APP_WS_URL=ws://app:3000
+    depends_on:
+      - app
+    networks:
+      - test-network
+
+  # PostgreSQL database for testing
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: flight_search_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d flight_search_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Redis cache for testing
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

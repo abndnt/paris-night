@@ -8,12 +8,24 @@ const app_1 = __importDefault(require("./app"));
 const config_1 = require("../config");
 const database_1 = require("../config/database");
 const ChatService_1 = require("../services/ChatService");
+const FlightSearchOrchestrator_1 = require("../services/FlightSearchOrchestrator");
+const SearchWebSocketService_1 = require("../services/SearchWebSocketService");
+const AirlineAdapterFactory_1 = require("../factories/AirlineAdapterFactory");
 const logger_1 = require("./logger");
 const startServer = async () => {
     try {
         await (0, database_1.initializeDatabase)();
         const server = (0, http_1.createServer)(app_1.default);
-        new ChatService_1.ChatService(server, database_1.database);
+        const chatService = new ChatService_1.ChatService(server, database_1.database);
+        const adapterFactory = new AirlineAdapterFactory_1.AirlineAdapterFactory({ redisClient: database_1.redisClient });
+        const searchOrchestrator = new FlightSearchOrchestrator_1.FlightSearchOrchestrator(database_1.database, database_1.redisClient, adapterFactory, chatService.getIO(), {
+            maxConcurrentSearches: 10,
+            searchTimeout: 30000,
+            enableRealTimeUpdates: true,
+            cacheResults: true,
+            cacheTtl: 300
+        });
+        const searchWebSocketService = new SearchWebSocketService_1.SearchWebSocketService(chatService.getIO(), searchOrchestrator);
         server.listen(config_1.config.server.port, config_1.config.server.host, () => {
             logger_1.logger.info(`🚀 Flight Search SaaS server running on http://${config_1.config.server.host}:${config_1.config.server.port}`);
             logger_1.logger.info(`📊 Environment: ${config_1.config.server.nodeEnv}`);

@@ -1,0 +1,150 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: flight-search-prod
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              BACKUP_FILE="flight_search_backup_$(date +%Y%m%d_%H%M%S).sql"
+              echo "Starting backup: $BACKUP_FILE"
+              
+              # Create backup
+              pg_dump -h $DB_HOST -U $POSTGRES_USER -d $DB_NAME > /tmp/$BACKUP_FILE
+              
+              # Compress backup
+              gzip /tmp/$BACKUP_FILE
+              
+              # Upload to S3 (requires AWS CLI)
+              aws s3 cp /tmp/$BACKUP_FILE.gz s3://$S3_BACKUP_BUCKET/postgres-backups/
+              
+              # Clean up local file
+              rm /tmp/$BACKUP_FILE.gz
+              
+              # Clean up old backups (keep last 30 days)
+              aws s3 ls s3://$S3_BACKUP_BUCKET/postgres-backups/ | \
+                awk '{print $4}' | \
+                sort | \
+                head -n -30 | \
+                xargs -I {} aws s3 rm s3://$S3_BACKUP_BUCKET/postgres-backups/{}
+              
+              echo "Backup completed successfully"
+            env:
+            - name: DB_HOST
+              value: "postgres-service"
+            - name: DB_NAME
+              value: "flight_search_prod"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: S3_BACKUP_BUCKET
+              value: "flight-search-backups"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-secret
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-secret
+                  key: secret-access-key
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: flight-search-prod
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: redis-backup
+            image: redis:7-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              BACKUP_FILE="redis_backup_$(date +%Y%m%d_%H%M%S).rdb"
+              echo "Starting Redis backup: $BACKUP_FILE"
+              
+              # Create Redis backup
+              redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --rdb /tmp/$BACKUP_FILE
+              
+              # Compress backup
+              gzip /tmp/$BACKUP_FILE
+              
+              # Upload to S3
+              aws s3 cp /tmp/$BACKUP_FILE.gz s3://$S3_BACKUP_BUCKET/redis-backups/
+              
+              # Clean up local file
+              rm /tmp/$BACKUP_FILE.gz
+              
+              # Clean up old backups (keep last 7 days for Redis)
+              aws s3 ls s3://$S3_BACKUP_BUCKET/redis-backups/ | \
+                awk '{print $4}' | \
+                sort | \
+                head -n -7 | \
+                xargs -I {} aws s3 rm s3://$S3_BACKUP_BUCKET/redis-backups/{}
+              
+              echo "Redis backup completed successfully"
+            env:
+            - name: REDIS_HOST
+              value: "redis-service"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+            - name: S3_BACKUP_BUCKET
+              value: "flight-search-backups"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-secret
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-secret
+                  key: secret-access-key
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-backup-secret
+  namespace: flight-search-prod
+type: Opaque
+data:
+  access-key-id: <BASE64_ENCODED_AWS_ACCESS_KEY>
+  secret-access-key: <BASE64_ENCODED_AWS_SECRET_KEY>

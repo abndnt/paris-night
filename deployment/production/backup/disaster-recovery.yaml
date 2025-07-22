@@ -1,0 +1,227 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-scripts
+  namespace: flight-search-prod
+data:
+  restore-postgres.sh: |
+    #!/bin/bash
+    set -e
+    
+    if [ -z "$1" ]; then
+      echo "Usage: $0 <backup-file-name>"
+      echo "Available backups:"
+      aws s3 ls s3://$S3_BACKUP_BUCKET/postgres-backups/ | tail -10
+      exit 1
+    fi
+    
+    BACKUP_FILE=$1
+    echo "Restoring PostgreSQL from backup: $BACKUP_FILE"
+    
+    # Download backup from S3
+    aws s3 cp s3://$S3_BACKUP_BUCKET/postgres-backups/$BACKUP_FILE /tmp/$BACKUP_FILE
+    
+    # Decompress if needed
+    if [[ $BACKUP_FILE == *.gz ]]; then
+      gunzip /tmp/$BACKUP_FILE
+      BACKUP_FILE=${BACKUP_FILE%.gz}
+    fi
+    
+    # Stop application pods to prevent new connections
+    kubectl scale deployment flight-search-backend --replicas=0 -n flight-search-prod
+    
+    # Wait for connections to close
+    sleep 30
+    
+    # Drop and recreate database
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h $DB_HOST -U $POSTGRES_USER -c "DROP DATABASE IF EXISTS flight_search_prod;"
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h $DB_HOST -U $POSTGRES_USER -c "CREATE DATABASE flight_search_prod;"
+    
+    # Restore database
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h $DB_HOST -U $POSTGRES_USER -d flight_search_prod < /tmp/$BACKUP_FILE
+    
+    # Clean up
+    rm /tmp/$BACKUP_FILE
+    
+    # Restart application pods
+    kubectl scale deployment flight-search-backend --replicas=3 -n flight-search-prod
+    
+    echo "PostgreSQL restore completed successfully"
+  
+  restore-redis.sh: |
+    #!/bin/bash
+    set -e
+    
+    if [ -z "$1" ]; then
+      echo "Usage: $0 <backup-file-name>"
+      echo "Available backups:"
+      aws s3 ls s3://$S3_BACKUP_BUCKET/redis-backups/ | tail -10
+      exit 1
+    fi
+    
+    BACKUP_FILE=$1
+    echo "Restoring Redis from backup: $BACKUP_FILE"
+    
+    # Download backup from S3
+    aws s3 cp s3://$S3_BACKUP_BUCKET/redis-backups/$BACKUP_FILE /tmp/$BACKUP_FILE
+    
+    # Decompress if needed
+    if [[ $BACKUP_FILE == *.gz ]]; then
+      gunzip /tmp/$BACKUP_FILE
+      BACKUP_FILE=${BACKUP_FILE%.gz}
+    fi
+    
+    # Stop Redis pod
+    kubectl scale deployment redis --replicas=0 -n flight-search-prod
+    
+    # Wait for pod to terminate
+    sleep 30
+    
+    # Copy backup file to Redis data directory
+    kubectl cp /tmp/$BACKUP_FILE flight-search-prod/redis-pod:/data/dump.rdb
+    
+    # Start Redis pod
+    kubectl scale deployment redis --replicas=1 -n flight-search-prod
+    
+    # Wait for Redis to start
+    sleep 60
+    
+    # Verify Redis is working
+    redis-cli -h redis-service -p 6379 -a $REDIS_PASSWORD ping
+    
+    # Clean up
+    rm /tmp/$BACKUP_FILE
+    
+    echo "Redis restore completed successfully"
+  
+  failover-procedure.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Starting disaster recovery failover procedure..."
+    
+    # 1. Assess the situation
+    echo "Checking system health..."
+    kubectl get pods -n flight-search-prod
+    kubectl get services -n flight-search-prod
+    
+    # 2. Scale down affected services
+    echo "Scaling down affected services..."
+    kubectl scale deployment flight-search-backend --replicas=0 -n flight-search-prod
+    kubectl scale deployment flight-search-frontend --replicas=0 -n flight-search-prod
+    
+    # 3. Check database status
+    echo "Checking database connectivity..."
+    if ! kubectl exec -n flight-search-prod deployment/postgres -- pg_isready; then
+      echo "Database is down, initiating database recovery..."
+      # Restore from latest backup
+      LATEST_BACKUP=$(aws s3 ls s3://$S3_BACKUP_BUCKET/postgres-backups/ | sort | tail -1 | awk '{print $4}')
+      ./restore-postgres.sh $LATEST_BACKUP
+    fi
+    
+    # 4. Check Redis status
+    echo "Checking Redis connectivity..."
+    if ! kubectl exec -n flight-search-prod deployment/redis -- redis-cli ping; then
+      echo "Redis is down, initiating Redis recovery..."
+      LATEST_REDIS_BACKUP=$(aws s3 ls s3://$S3_BACKUP_BUCKET/redis-backups/ | sort | tail -1 | awk '{print $4}')
+      ./restore-redis.sh $LATEST_REDIS_BACKUP
+    fi
+    
+    # 5. Restart services with health checks
+    echo "Restarting application services..."
+    kubectl scale deployment flight-search-backend --replicas=3 -n flight-search-prod
+    kubectl scale deployment flight-search-frontend --replicas=2 -n flight-search-prod
+    
+    # 6. Wait for services to be ready
+    echo "Waiting for services to be ready..."
+    kubectl wait --for=condition=available --timeout=300s deployment/flight-search-backend -n flight-search-prod
+    kubectl wait --for=condition=available --timeout=300s deployment/flight-search-frontend -n flight-search-prod
+    
+    # 7. Run health checks
+    echo "Running post-recovery health checks..."
+    kubectl exec -n flight-search-prod deployment/flight-search-backend -- curl -f http://localhost:3000/api/health
+    
+    # 8. Send notification
+    echo "Sending recovery notification..."
+    curl -X POST -H 'Content-type: application/json' \
+      --data '{"text":"🚨 Disaster recovery completed for Flight Search SaaS"}' \
+      $SLACK_WEBHOOK_URL
+    
+    echo "Disaster recovery procedure completed successfully"
+  
+  health-check.sh: |
+    #!/bin/bash
+    
+    echo "Running comprehensive health check..."
+    
+    # Check Kubernetes cluster
+    echo "Checking Kubernetes cluster health..."
+    kubectl cluster-info
+    kubectl get nodes
+    
+    # Check application pods
+    echo "Checking application pods..."
+    kubectl get pods -n flight-search-prod
+    
+    # Check services
+    echo "Checking services..."
+    kubectl get services -n flight-search-prod
+    
+    # Check ingress
+    echo "Checking ingress..."
+    kubectl get ingress -n flight-search-prod
+    
+    # Test database connectivity
+    echo "Testing database connectivity..."
+    kubectl exec -n flight-search-prod deployment/postgres -- pg_isready
+    
+    # Test Redis connectivity
+    echo "Testing Redis connectivity..."
+    kubectl exec -n flight-search-prod deployment/redis -- redis-cli ping
+    
+    # Test application endpoints
+    echo "Testing application endpoints..."
+    curl -f http://api.flightsearch.com/api/health || echo "API health check failed"
+    curl -f http://flightsearch.com/health || echo "Frontend health check failed"
+    
+    # Check monitoring systems
+    echo "Checking monitoring systems..."
+    curl -f http://prometheus:9090/-/healthy || echo "Prometheus health check failed"
+    curl -f http://grafana:3000/api/health || echo "Grafana health check failed"
+    
+    echo "Health check completed"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: disaster-recovery-setup
+  namespace: flight-search-prod
+spec:
+  template:
+    spec:
+      containers:
+      - name: setup
+        image: alpine/k8s:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Install required tools
+          apk add --no-cache curl aws-cli
+          
+          # Create disaster recovery scripts directory
+          mkdir -p /opt/disaster-recovery
+          
+          # Copy scripts from configmap
+          cp /scripts/* /opt/disaster-recovery/
+          chmod +x /opt/disaster-recovery/*.sh
+          
+          echo "Disaster recovery setup completed"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: scripts
+        configMap:
+          name: disaster-recovery-scripts
+      restartPolicy: OnFailure

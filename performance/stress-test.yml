@@ -1,0 +1,85 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Gradual ramp up to stress levels
+    - duration: 300
+      arrivalRate: 10
+      rampTo: 200
+      name: "Ramp to stress level"
+    # Sustained stress
+    - duration: 600
+      arrivalRate: 200
+      name: "Sustained stress"
+    # Peak stress
+    - duration: 180
+      arrivalRate: 200
+      rampTo: 500
+      name: "Peak stress"
+    # Recovery
+    - duration: 120
+      arrivalRate: 500
+      rampTo: 50
+      name: "Recovery"
+  payload:
+    path: "./test-data.csv"
+    fields:
+      - "email"
+      - "password"
+      - "origin"
+      - "destination"
+      - "departureDate"
+
+scenarios:
+  - name: "Heavy Search Load"
+    weight: 70
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - loop:
+          - post:
+              url: "/api/search/flights"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+              json:
+                origin: "{{ origin }}"
+                destination: "{{ destination }}"
+                departureDate: "{{ departureDate }}"
+                passengers: 1
+                cabinClass: "economy"
+          - think: 1
+        count: 5
+
+  - name: "Concurrent Chat Sessions"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/api/chat/session"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json: "$.sessionId"
+              as: "sessionId"
+      - loop:
+          - post:
+              url: "/api/chat/message"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+              json:
+                sessionId: "{{ sessionId }}"
+                message: "Search flights from {{ origin }} to {{ destination }}"
+          - think: 2
+        count: 10

@@ -20,6 +20,7 @@ export declare class ChatService {
     private io;
     private chatModel;
     private nlpService;
+    private llmService;
     constructor(server: HTTPServer, database: Pool);
     private setupSocketHandlers;
     private handleConnection;

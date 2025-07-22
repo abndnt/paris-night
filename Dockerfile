@@ -26,6 +26,26 @@ EXPOSE 3000
 # Start development server
 CMD ["npm", "run", "dev"]
 
+# Test stage
+FROM base AS test
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Install additional test dependencies
+RUN npm install --save-dev playwright @playwright/test
+
+# Expose port
+EXPOSE 3000
+
+# Start test server
+CMD ["npm", "run", "test:server"]
+
 # Build stage
 FROM base AS builder
 WORKDIR /app

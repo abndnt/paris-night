@@ -1,0 +1,23 @@
+{
+  "name": "american-airlines",
+  "baseUrl": "https://api.aa.com/v1",
+  "apiKey": "your-api-key-here",
+  "timeout": 10000,
+  "rateLimit": {
+    "requestsPerMinute": 100,
+    "requestsPerHour": 2000
+  },
+  "retryConfig": {
+    "maxRetries": 3,
+    "backoffMultiplier": 2,
+    "initialDelay": 1000
+  },
+  "credentials": {
+    "apiKey": "your-api-key-here",
+    "clientId": "your-client-id",
+    "clientSecret": "your-client-secret"
+  },
+  "environment": "production",
+  "lastUpdated": "2024-01-01T00:00:00.000Z",
+  "version": "1.0.0"
+}

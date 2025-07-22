@@ -2,10 +2,18 @@ import { Router, Request, Response } from 'express';
 import { ChatModel } from '../models/Chat';
 import { NLPService } from '../services/NLPService';
 import { LLMService, ConversationContext } from '../services/LLMService';
-import { authenticateToken, optionalAuth, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, optionalAuth } from '../middleware/auth';
 import { database } from '../config/database';
 import { logger } from '../utils/logger';
-import Joi from 'joi';
+import * as Joi from 'joi';
+
+// Extend Request interface for user property
+interface RequestWithUser extends Request {
+  user?: {
+    id: string;
+    email: string;
+  };
+}
 
 const router = Router();
 const chatModel = new ChatModel(database);
@@ -28,7 +36,7 @@ const getMessagesSchema = Joi.object({
 });
 
 // Create a new chat session
-router.post('/sessions', optionalAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/sessions', optionalAuth, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const { error, value } = createSessionSchema.validate(req.body);
     if (error) {
@@ -67,7 +75,7 @@ router.post('/sessions', optionalAuth, async (req: AuthenticatedRequest, res: Re
 });
 
 // Get session details
-router.get('/sessions/:sessionId', optionalAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/sessions/:sessionId', optionalAuth, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
     
@@ -106,7 +114,7 @@ router.get('/sessions/:sessionId', optionalAuth, async (req: AuthenticatedReques
 });
 
 // Get user's sessions (authenticated only)
-router.get('/sessions', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/sessions', authenticateToken, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' });
@@ -131,7 +139,7 @@ router.get('/sessions', authenticateToken, async (req: AuthenticatedRequest, res
 });
 
 // Send a message to a session
-router.post('/sessions/:sessionId/messages', optionalAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/sessions/:sessionId/messages', optionalAuth, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
     
@@ -252,7 +260,7 @@ router.post('/sessions/:sessionId/messages', optionalAuth, async (req: Authentic
 });
 
 // Get messages from a session
-router.get('/sessions/:sessionId/messages', optionalAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/sessions/:sessionId/messages', optionalAuth, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
     
@@ -312,7 +320,7 @@ router.get('/sessions/:sessionId/messages', optionalAuth, async (req: Authentica
 });
 
 // Delete a session (authenticated users only)
-router.delete('/sessions/:sessionId', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.delete('/sessions/:sessionId', authenticateToken, async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
     

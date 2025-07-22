@@ -1,0 +1,11 @@
+email,password,origin,destination,departureDate
+test1@example.com,password123,NYC,LAX,2024-12-25
+test2@example.com,password123,BOS,SFO,2024-12-26
+test3@example.com,password123,CHI,MIA,2024-12-27
+test4@example.com,password123,DEN,SEA,2024-12-28
+test5@example.com,password123,ATL,LAS,2024-12-29
+test6@example.com,password123,DFW,PHX,2024-12-30
+test7@example.com,password123,IAH,DCA,2024-12-31
+test8@example.com,password123,MSP,BNA,2025-01-01
+test9@example.com,password123,DTW,AUS,2025-01-02
+test10@example.com,password123,PHL,SAN,2025-01-03

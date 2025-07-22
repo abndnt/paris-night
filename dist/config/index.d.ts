@@ -29,5 +29,14 @@ export declare const config: {
     logging: {
         level: string;
     };
+    llm: {
+        baseUrl: string;
+        apiKey: string;
+        model: string;
+        fallbackModel: string;
+        referer: string;
+        title: string;
+        enableFallback: boolean;
+    };
 };
 //# sourceMappingURL=index.d.ts.map

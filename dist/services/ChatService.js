@@ -7,6 +7,7 @@ exports.ChatService = void 0;
 const socket_io_1 = require("socket.io");
 const Chat_1 = require("../models/Chat");
 const NLPService_1 = require("./NLPService");
+const LLMService_1 = require("./LLMService");
 const logger_1 = require("../utils/logger");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = require("../config");
@@ -22,6 +23,7 @@ class ChatService {
         });
         this.chatModel = new Chat_1.ChatModel(database);
         this.nlpService = new NLPService_1.NLPService();
+        this.llmService = new LLMService_1.LLMService();
         this.setupSocketHandlers();
     }
     setupSocketHandlers() {
@@ -115,17 +117,71 @@ class ChatService {
                     metadata: userMessage.metadata,
                     timestamp: userMessage.createdAt.toISOString()
                 });
-                const intent = await this.nlpService.analyzeMessage(data.content);
-                logger_1.logger.info(`Message intent: ${intent.intent} (confidence: ${intent.confidence})`);
-                const responseContent = this.nlpService.generateResponse(intent);
+                let responseContent;
+                let intentData;
+                let processingSource = 'llm';
+                try {
+                    const recentMessages = await this.chatModel.getRecentMessages(socket.sessionId, 15);
+                    const context = {
+                        sessionId: socket.sessionId,
+                        userId: socket.user?.id,
+                        messageHistory: recentMessages.map(msg => ({
+                            role: msg.messageType === 'user' ? 'user' : 'assistant',
+                            content: msg.content,
+                            timestamp: msg.createdAt
+                        })),
+                        userPreferences: socket.user?.id ? {
+                            preferredAirlines: [],
+                            preferredAirports: [],
+                            loyaltyPrograms: []
+                        } : undefined
+                    };
+                    const llmResponse = await this.llmService.generateResponse(data.content, context);
+                    responseContent = llmResponse.content;
+                    intentData = {
+                        intent: llmResponse.intent.intent,
+                        confidence: llmResponse.intent.confidence,
+                        entities: llmResponse.intent.entities,
+                        requiresAction: llmResponse.requiresAction,
+                        followUpQuestions: llmResponse.intent.followUpQuestions,
+                        processingModel: this.llmService.getAvailableModels()[0]
+                    };
+                    logger_1.logger.info(`LLM processed message: ${llmResponse.intent.intent} (confidence: ${llmResponse.intent.confidence})`);
+                }
+                catch (error) {
+                    logger_1.logger.warn('All LLM services failed, using fallback NLP:', error);
+                    processingSource = 'fallback';
+                    try {
+                        const intent = await this.nlpService.analyzeMessage(data.content);
+                        responseContent = this.nlpService.generateResponse(intent);
+                        intentData = {
+                            intent: intent.intent,
+                            confidence: intent.confidence,
+                            entities: intent.entities,
+                            fallback: true,
+                            fallbackReason: 'llm_unavailable'
+                        };
+                    }
+                    catch (nlpError) {
+                        logger_1.logger.error('Both LLM and NLP services failed:', nlpError);
+                        responseContent = this.nlpService.generateSystemErrorResponse();
+                        intentData = {
+                            intent: 'unknown',
+                            confidence: 0,
+                            entities: {},
+                            fallback: true,
+                            fallbackReason: 'all_services_failed'
+                        };
+                        processingSource = 'system_error';
+                    }
+                }
                 const assistantMessage = await this.chatModel.addMessage({
                     sessionId: socket.sessionId,
                     messageType: 'assistant',
                     content: responseContent,
                     metadata: {
-                        intent: intent.intent,
-                        confidence: intent.confidence,
-                        entities: intent.entities
+                        ...intentData,
+                        processingSource
                     }
                 });
                 this.io.to(`session_${socket.sessionId}`).emit('message', {

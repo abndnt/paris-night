@@ -1,75 +1,133 @@
 import { Router, Request, Response } from 'express';
-import { pool, redisClient } from '../config/database';
 import { asyncHandler } from '../middleware/errorHandler';
+import { healthCheckService } from '../services/HealthCheckService';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
-// Health check endpoint
-router.get('/health', asyncHandler(async (_req: Request, res: Response) => {
-  const health = {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    services: {
-      database: 'unknown',
-      redis: 'unknown',
-    },
-  };
-
+/**
+ * Comprehensive health check endpoint
+ * GET /health
+ */
+router.get('/health', asyncHandler(async (req: Request, res: Response) => {
+  const includeMetrics = req.query.metrics === 'true';
+  const startTime = Date.now();
+  
   try {
-    // Check PostgreSQL connection
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-    health.services.database = 'healthy';
+    const health = await healthCheckService.checkHealth(includeMetrics);
+    const duration = Date.now() - startTime;
+    
+    // Log health check result
+    logger.info(`Health check completed in ${duration}ms`, {
+      status: health.status,
+      duration: `${duration}ms`,
+      requestId: (req as any).id
+    });
+    
+    // Set appropriate status code based on health status
+    const statusCode = health.status === 'healthy' ? 200 : 
+                       health.status === 'degraded' ? 207 : 503;
+    
+    res.status(statusCode).json(health);
   } catch (error) {
-    health.services.database = 'unhealthy';
-    health.status = 'degraded';
+    logger.error('Health check failed', error as Error);
+    
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date(),
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-
-  try {
-    // Check Redis connection
-    await redisClient.ping();
-    health.services.redis = 'healthy';
-  } catch (error) {
-    health.services.redis = 'unhealthy';
-    health.status = 'degraded';
-  }
-
-  const statusCode = health.status === 'ok' ? 200 : 503;
-  res.status(statusCode).json(health);
 }));
 
-// Readiness check endpoint
-router.get('/ready', asyncHandler(async (_req: Request, res: Response) => {
+/**
+ * Readiness check endpoint for Kubernetes/container orchestration
+ * GET /ready
+ */
+router.get('/ready', asyncHandler(async (req: Request, res: Response) => {
   try {
-    // Check if all critical services are available
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
+    const readiness = await healthCheckService.readinessCheck();
     
-    await redisClient.ping();
-    
-    res.status(200).json({
-      status: 'ready',
-      timestamp: new Date().toISOString(),
-    });
+    const statusCode = readiness.ready ? 200 : 503;
+    res.status(statusCode).json(readiness);
   } catch (error) {
+    logger.error('Readiness check failed', error as Error, {
+      requestId: (req as any).id
+    });
+    
     res.status(503).json({
       status: 'not ready',
-      timestamp: new Date().toISOString(),
-      error: 'Services not available',
+      ready: false,
+      timestamp: new Date(),
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }));
 
-// Liveness check endpoint
-router.get('/live', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'alive',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  });
-});
+/**
+ * Liveness check endpoint for Kubernetes/container orchestration
+ * GET /live
+ */
+router.get('/live', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const liveness = await healthCheckService.quickCheck();
+    res.status(200).json(liveness);
+  } catch (error) {
+    // Even if there's an error, we return 200 for liveness
+    // as long as the application is running and can respond
+    logger.warn('Liveness check error', error as Error, {
+      requestId: (req as any).id
+    });
+    
+    res.status(200).json({
+      status: 'alive',
+      timestamp: new Date(),
+      warning: 'Error occurred during check'
+    });
+  }
+}));
+
+/**
+ * Service-specific health check endpoint
+ * GET /health/:service
+ */
+router.get('/health/:service', asyncHandler(async (req: Request, res: Response) => {
+  const { service } = req.params;
+  const validServices = ['database', 'redis', 'disk', 'errorTracking'];
+  
+  if (!validServices.includes(service)) {
+    return res.status(400).json({
+      error: `Invalid service: ${service}. Valid services are: ${validServices.join(', ')}`
+    });
+  }
+  
+  try {
+    const health = await healthCheckService.checkHealth(false);
+    
+    if (!health.services[service]) {
+      return res.status(404).json({
+        error: `Service ${service} not found in health check results`
+      });
+    }
+    
+    const serviceHealth = health.services[service];
+    const statusCode = serviceHealth.status === 'healthy' ? 200 : 
+                       serviceHealth.status === 'degraded' ? 207 : 503;
+    
+    res.status(statusCode).json({
+      service,
+      ...serviceHealth
+    });
+  } catch (error) {
+    logger.error(`Health check for service ${service} failed`, error as Error);
+    
+    res.status(500).json({
+      service,
+      status: 'error',
+      timestamp: new Date(),
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
 
 export default router;

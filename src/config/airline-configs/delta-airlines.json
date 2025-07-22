@@ -1,0 +1,22 @@
+{
+  "name": "delta-airlines",
+  "baseUrl": "https://api.delta.com/v2",
+  "apiKey": "your-delta-api-key-here",
+  "timeout": 8000,
+  "rateLimit": {
+    "requestsPerMinute": 80,
+    "requestsPerHour": 1500
+  },
+  "retryConfig": {
+    "maxRetries": 2,
+    "backoffMultiplier": 1.5,
+    "initialDelay": 800
+  },
+  "credentials": {
+    "apiKey": "your-delta-api-key-here",
+    "apiSecret": "your-delta-api-secret"
+  },
+  "environment": "production",
+  "lastUpdated": "2024-01-01T00:00:00.000Z",
+  "version": "1.0.0"
+}

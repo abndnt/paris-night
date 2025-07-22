@@ -1,28 +1,60 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Chat_1 = require("../models/Chat");
 const NLPService_1 = require("../services/NLPService");
+const LLMService_1 = require("../services/LLMService");
 const auth_1 = require("../middleware/auth");
 const database_1 = require("../config/database");
 const logger_1 = require("../utils/logger");
-const joi_1 = __importDefault(require("joi"));
+const Joi = __importStar(require("joi"));
 const router = (0, express_1.Router)();
 const chatModel = new Chat_1.ChatModel(database_1.database);
 const nlpService = new NLPService_1.NLPService();
-const createSessionSchema = joi_1.default.object({
-    sessionData: joi_1.default.object().optional()
+const llmService = new LLMService_1.LLMService();
+const createSessionSchema = Joi.object({
+    sessionData: Joi.object().optional()
 });
-const sendMessageSchema = joi_1.default.object({
-    content: joi_1.default.string().required().min(1).max(2000),
-    metadata: joi_1.default.object().optional()
+const sendMessageSchema = Joi.object({
+    content: Joi.string().required().min(1).max(2000),
+    metadata: Joi.object().optional()
 });
-const getMessagesSchema = joi_1.default.object({
-    limit: joi_1.default.number().integer().min(1).max(100).default(50),
-    offset: joi_1.default.number().integer().min(0).default(0)
+const getMessagesSchema = Joi.object({
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    offset: Joi.number().integer().min(0).default(0)
 });
 router.post('/sessions', auth_1.optionalAuth, async (req, res) => {
     try {
@@ -147,19 +179,51 @@ router.post('/sessions/:sessionId/messages', auth_1.optionalAuth, async (req, re
             content: value.content,
             metadata: value.metadata
         });
-        const intent = await nlpService.analyzeMessage(value.content);
-        const responseContent = nlpService.generateResponse(intent);
+        let responseContent;
+        let intentData;
+        let processingSource = 'llm';
+        try {
+            const recentMessages = await chatModel.getRecentMessages(sessionId, 10);
+            const context = {
+                sessionId,
+                userId: req.user?.id,
+                messageHistory: recentMessages.map(msg => ({
+                    role: msg.messageType === 'user' ? 'user' : 'assistant',
+                    content: msg.content,
+                    timestamp: msg.createdAt
+                }))
+            };
+            const llmResponse = await llmService.generateResponse(value.content, context);
+            responseContent = llmResponse.content;
+            intentData = {
+                intent: llmResponse.intent.intent,
+                confidence: llmResponse.intent.confidence,
+                entities: llmResponse.intent.entities,
+                requiresAction: llmResponse.requiresAction
+            };
+        }
+        catch (error) {
+            logger_1.logger.warn('LLM service failed, using fallback NLP:', error);
+            processingSource = 'fallback';
+            const intent = await nlpService.analyzeMessage(value.content);
+            responseContent = nlpService.generateResponse(intent);
+            intentData = {
+                intent: intent.intent,
+                confidence: intent.confidence,
+                entities: intent.entities,
+                fallback: true
+            };
+        }
         const assistantMessage = await chatModel.addMessage({
             sessionId,
             messageType: 'assistant',
             content: responseContent,
             metadata: {
-                intent: intent.intent,
-                confidence: intent.confidence,
-                entities: intent.entities
+                ...intentData,
+                processingSource
             }
         });
-        logger_1.logger.info(`Messages exchanged in session ${sessionId}, intent: ${intent.intent}`);
+        logger_1.logger.info(`Messages exchanged in session ${sessionId}, intent: ${intentData.intent}`);
         res.status(201).json({
             userMessage: {
                 id: userMessage.id,
@@ -273,12 +337,33 @@ router.post('/analyze', async (req, res) => {
             res.status(400).json({ error: 'Message is required and must be a string' });
             return;
         }
-        const intent = await nlpService.analyzeMessage(message);
+        let analysisResult;
+        let processingSource = 'llm';
+        try {
+            const intent = await llmService.extractFlightIntent(message);
+            analysisResult = {
+                intent: intent.intent,
+                confidence: intent.confidence,
+                entities: intent.entities,
+                suggestedResponse: intent.response,
+                followUpQuestions: intent.followUpQuestions
+            };
+        }
+        catch (error) {
+            logger_1.logger.warn('LLM service failed for analysis, using fallback:', error);
+            processingSource = 'fallback';
+            const intent = await nlpService.analyzeMessage(message);
+            analysisResult = {
+                intent: intent.intent,
+                confidence: intent.confidence,
+                entities: intent.entities,
+                suggestedResponse: nlpService.generateResponse(intent),
+                fallback: true
+            };
+        }
         res.json({
-            intent: intent.intent,
-            confidence: intent.confidence,
-            entities: intent.entities,
-            suggestedResponse: nlpService.generateResponse(intent)
+            ...analysisResult,
+            processingSource
         });
     }
     catch (error) {

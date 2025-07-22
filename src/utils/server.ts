@@ -1,8 +1,11 @@
 import { createServer } from 'http';
-import app from './app';
+import { createApp } from './app';
 import { config } from '../config';
-import { initializeDatabase, closeDatabase, database } from '../config/database';
+import { initializeDatabase, closeDatabase, database, redisClient } from '../config/database';
 import { ChatService } from '../services/ChatService';
+import { FlightSearchOrchestrator } from '../services/FlightSearchOrchestrator';
+import { SearchWebSocketService } from '../services/SearchWebSocketService';
+import { AirlineAdapterFactory } from '../factories/AirlineAdapterFactory';
 import { logger } from './logger';
 
 // Initialize server
@@ -11,11 +14,41 @@ const startServer = async (): Promise<void> => {
     // Initialize database connections
     await initializeDatabase();
 
+    // Create app with database (without socket.io initially)
+    const app = createApp(database);
+    
     // Create HTTP server
     const server = createServer(app);
 
     // Initialize Chat Service with Socket.io
-    new ChatService(server, database);
+    const chatService = new ChatService(server, database);
+    
+    // Update app routes to include socket.io
+    const appWithSocket = createApp(database, chatService.getIO());
+    server.removeAllListeners('request');
+    server.on('request', appWithSocket);
+    
+    // Initialize Flight Search Orchestrator
+    const adapterFactory = new AirlineAdapterFactory({ redisClient });
+    const searchOrchestrator = new FlightSearchOrchestrator(
+      database,
+      redisClient,
+      adapterFactory,
+      chatService.getIO(),
+      {
+        maxConcurrentSearches: 10,
+        searchTimeout: 30000,
+        enableRealTimeUpdates: true,
+        cacheResults: true,
+        cacheTtl: 300
+      }
+    );
+    
+    // Initialize Search WebSocket Service
+    const searchWebSocketService = new SearchWebSocketService(
+      chatService.getIO(),
+      searchOrchestrator
+    );
 
     // Start HTTP server
     server.listen(config.server.port, config.server.host, () => {

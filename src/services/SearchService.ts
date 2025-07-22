@@ -29,10 +29,8 @@ export interface SearchOptions {
 
 export class SearchService {
   private flightSearchModel: FlightSearchModel;
-  private db: Pool;
 
   constructor(database: Pool) {
-    this.db = database;
     this.flightSearchModel = new FlightSearchModel(database);
   }
 
@@ -44,7 +42,7 @@ export class SearchService {
       // Validate search criteria
       const { error } = SearchCriteriaSchema.validate(searchData.searchCriteria);
       if (error) {
-        throw new Error(`Invalid search criteria: ${error.details[0].message}`);
+        throw new Error(`Invalid search criteria: ${error.details[0]!.message}`);
       }
 
       // Sanitize search criteria
@@ -178,7 +176,7 @@ export class SearchService {
 
       // Departure time filter
       if (filters.departureTimeRange && result.route.length > 0) {
-        const departureTime = result.route[0].departureTime;
+        const departureTime = result.route[0]!.departureTime;
         const timeString = departureTime.toTimeString().substring(0, 5); // HH:MM format
         
         if (timeString < filters.departureTimeRange.earliest || 
@@ -286,11 +284,10 @@ export class SearchService {
    * Sanitize search criteria to prevent injection attacks
    */
   private sanitizeSearchCriteria(criteria: SearchCriteria): SearchCriteria {
-    return {
+    const sanitized: SearchCriteria = {
       origin: criteria.origin.toUpperCase().trim().substring(0, 3),
       destination: criteria.destination.toUpperCase().trim().substring(0, 3),
       departureDate: new Date(criteria.departureDate),
-      returnDate: criteria.returnDate ? new Date(criteria.returnDate) : undefined,
       passengers: {
         adults: Math.max(1, Math.min(9, Math.floor(criteria.passengers.adults))),
         children: Math.max(0, Math.min(8, Math.floor(criteria.passengers.children))),
@@ -299,22 +296,38 @@ export class SearchService {
       cabinClass: criteria.cabinClass,
       flexible: Boolean(criteria.flexible)
     };
+
+    if (criteria.returnDate) {
+      sanitized.returnDate = new Date(criteria.returnDate);
+    }
+
+    return sanitized;
   }
 
   /**
    * Sanitize flight results
    */
   private sanitizeFlightResults(results: FlightResult[]): FlightResult[] {
-    return results.map(result => ({
-      ...result,
-      id: result.id.toString(),
-      airline: result.airline.substring(0, 50),
-      flightNumber: result.flightNumber.substring(0, 20),
-      duration: Math.max(0, Math.floor(result.duration)),
-      layovers: Math.max(0, Math.floor(result.layovers)),
-      layoverDuration: result.layoverDuration ? Math.max(0, Math.floor(result.layoverDuration)) : undefined,
-      score: result.score ? Math.max(0, Math.min(100, result.score)) : undefined
-    }));
+    return results.map(result => {
+      const sanitized: FlightResult = {
+        ...result,
+        id: result.id.toString(),
+        airline: result.airline.substring(0, 50),
+        flightNumber: result.flightNumber.substring(0, 20),
+        duration: Math.max(0, Math.floor(result.duration)),
+        layovers: Math.max(0, Math.floor(result.layovers))
+      };
+
+      if (result.layoverDuration !== undefined) {
+        sanitized.layoverDuration = Math.max(0, Math.floor(result.layoverDuration));
+      }
+
+      if (result.score !== undefined) {
+        sanitized.score = Math.max(0, Math.min(100, result.score));
+      }
+
+      return sanitized;
+    });
   }
 
   /**

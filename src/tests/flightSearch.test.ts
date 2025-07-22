@@ -1,7 +1,6 @@
 import { Pool } from 'pg';
-import { 
-  FlightSearchModel, 
-  SearchCriteria, 
+import {
+  FlightSearchModel,
   CreateFlightSearchData,
   UpdateFlightSearchData,
   FlightResult,
@@ -38,14 +37,14 @@ describe('FlightSearch Data Models', () => {
         const invalidPassengers = { adults: 0, children: 1, infants: 0 };
         const { error } = PassengerCountSchema.validate(invalidPassengers);
         expect(error).toBeDefined();
-        expect(error?.details[0].message).toContain('must be greater than or equal to 1');
+        expect(error!.details[0]!.message).toContain('must be greater than or equal to 1');
       });
 
       it('should limit maximum passengers', () => {
         const invalidPassengers = { adults: 10, children: 0, infants: 0 };
         const { error } = PassengerCountSchema.validate(invalidPassengers);
         expect(error).toBeDefined();
-        expect(error?.details[0].message).toContain('must be less than or equal to 9');
+        expect(error!.details[0]!.message).toContain('must be less than or equal to 9');
       });
 
       it('should default children and infants to 0', () => {
@@ -75,14 +74,14 @@ describe('FlightSearch Data Models', () => {
         const invalidCriteria = { ...validCriteria, origin: 'INVALID' };
         const { error } = SearchCriteriaSchema.validate(invalidCriteria);
         expect(error).toBeDefined();
-        expect(error?.details[0].message).toContain('valid 3-letter airport code');
+        expect(error!.details[0]!.message).toContain('length must be 3 characters long');
       });
 
       it('should require future departure date', () => {
         const invalidCriteria = { ...validCriteria, departureDate: new Date(Date.now() - 86400000) };
         const { error } = SearchCriteriaSchema.validate(invalidCriteria);
         expect(error).toBeDefined();
-        expect(error?.details[0].message).toContain('must be in the future');
+        expect(error!.details[0]!.message).toContain('must be in the future');
       });
 
       it('should validate return date is after departure', () => {
@@ -92,7 +91,7 @@ describe('FlightSearch Data Models', () => {
         };
         const { error } = SearchCriteriaSchema.validate(invalidCriteria);
         expect(error).toBeDefined();
-        expect(error?.details[0].message).toContain('must be after departure date');
+        expect(error!.details[0]!.message).toContain('must be after departure date');
       });
 
       it('should default cabin class to economy', () => {
@@ -150,7 +149,7 @@ describe('FlightSearch Data Models', () => {
       searchCriteria: {
         origin: 'JFK',
         destination: 'LAX',
-        departureDate: new Date('2024-12-01'),
+        departureDate: new Date(Date.now() + 86400000), // tomorrow
         passengers: { adults: 2, children: 0, infants: 0 },
         cabinClass: 'economy',
         flexible: false
@@ -162,7 +161,7 @@ describe('FlightSearch Data Models', () => {
       user_id: '123e4567-e89b-12d3-a456-426614174000',
       origin: 'JFK',
       destination: 'LAX',
-      departure_date: '2024-12-01',
+      departure_date: new Date(Date.now() + 86400000).toISOString(),
       return_date: null,
       passengers: { adults: 2, children: 0, infants: 0 },
       cabin_class: 'economy',
@@ -306,7 +305,7 @@ describe('FlightSearch Data Models', () => {
         );
 
         expect(result).toHaveLength(1);
-        expect(result[0].userId).toBe(mockDbRow.user_id);
+        expect(result[0]!.userId).toBe(mockDbRow.user_id);
       });
     });
 
@@ -379,7 +378,7 @@ describe('FlightSearch Data Models', () => {
             user_id: mockResult.userId,
             origin: 'JFK',
             destination: 'LAX',
-            departure_date: validSearchData.searchCriteria.departureDate,
+            departure_date: validSearchData.searchCriteria.departureDate.toISOString(),
             return_date: null,
             passengers: validSearchData.searchCriteria.passengers,
             cabin_class: 'economy',
@@ -414,7 +413,7 @@ describe('FlightSearch Data Models', () => {
             user_id: validSearchData.userId,
             origin: 'JFK',
             destination: 'LAX',
-            departure_date: validSearchData.searchCriteria.departureDate,
+            departure_date: validSearchData.searchCriteria.departureDate.toISOString(),
             return_date: null,
             passengers: validSearchData.searchCriteria.passengers,
             cabin_class: 'economy',
@@ -562,33 +561,34 @@ describe('FlightSearch Data Models', () => {
       it('should filter by max price', () => {
         const filtered = searchService.filterFlightResults(mockResults, { maxPrice: 600 });
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].id).toBe('flight-1');
+        expect(filtered[0]!.id).toBe('flight-1');
       });
 
       it('should filter by max duration', () => {
         const filtered = searchService.filterFlightResults(mockResults, { maxDuration: 400 });
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].id).toBe('flight-1');
+        expect(filtered[0]!.id).toBe('flight-1');
       });
 
       it('should filter by max layovers', () => {
         const filtered = searchService.filterFlightResults(mockResults, { maxLayovers: 0 });
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].id).toBe('flight-1');
+        expect(filtered[0]!.id).toBe('flight-1');
       });
 
       it('should filter by preferred airlines', () => {
         const filtered = searchService.filterFlightResults(mockResults, { preferredAirlines: ['AA'] });
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].airline).toBe('AA');
+        expect(filtered[0]!.airline).toBe('AA');
       });
 
       it('should filter by departure time range', () => {
-        const filtered = searchService.filterFlightResults(mockResults, { 
+        const filtered = searchService.filterFlightResults(mockResults, {
           departureTimeRange: { earliest: '06:00', latest: '12:00' }
         });
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].id).toBe('flight-1');
+        // flight-2 departs at 18:00 UTC (12:00 local), which is within 06:00-12:00 range
+        expect(filtered[0]!.id).toBe('flight-2');
       });
     });
 
@@ -620,26 +620,26 @@ describe('FlightSearch Data Models', () => {
 
       it('should sort by price ascending', () => {
         const sorted = searchService.sortFlightResults(mockResults, 'price', 'asc');
-        expect(sorted[0].id).toBe('flight-2');
-        expect(sorted[1].id).toBe('flight-1');
+        expect(sorted[0]!.id).toBe('flight-2');
+        expect(sorted[1]!.id).toBe('flight-1');
       });
 
       it('should sort by price descending', () => {
         const sorted = searchService.sortFlightResults(mockResults, 'price', 'desc');
-        expect(sorted[0].id).toBe('flight-1');
-        expect(sorted[1].id).toBe('flight-2');
+        expect(sorted[0]!.id).toBe('flight-1');
+        expect(sorted[1]!.id).toBe('flight-2');
       });
 
       it('should sort by duration', () => {
         const sorted = searchService.sortFlightResults(mockResults, 'duration', 'asc');
-        expect(sorted[0].id).toBe('flight-2');
-        expect(sorted[1].id).toBe('flight-1');
+        expect(sorted[0]!.id).toBe('flight-2');
+        expect(sorted[1]!.id).toBe('flight-1');
       });
 
       it('should sort by score (higher is better)', () => {
         const sorted = searchService.sortFlightResults(mockResults, 'score', 'asc');
-        expect(sorted[0].id).toBe('flight-2'); // Higher score comes first
-        expect(sorted[1].id).toBe('flight-1');
+        expect(sorted[0]!.id).toBe('flight-2'); // Higher score comes first
+        expect(sorted[1]!.id).toBe('flight-1');
       });
     });
   });

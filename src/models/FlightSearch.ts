@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import Joi from 'joi';
+import * as Joi from 'joi';
 
 // Core interfaces for flight search functionality
 export interface PassengerCount {
@@ -141,7 +141,7 @@ export class FlightSearchModel {
     // Validate input data
     const { error, value } = CreateFlightSearchSchema.validate(searchData);
     if (error) {
-      throw new Error(`Validation error: ${error.details[0].message}`);
+      throw new Error(`Validation error: ${error.details[0]!.message}`);
     }
 
     const query = `
@@ -193,7 +193,7 @@ export class FlightSearchModel {
     // Validate input data
     const { error, value } = UpdateFlightSearchSchema.validate(updateData);
     if (error) {
-      throw new Error(`Validation error: ${error.details[0].message}`);
+      throw new Error(`Validation error: ${error.details[0]!.message}`);
     }
 
     const setParts: string[] = [];
@@ -284,7 +284,7 @@ export class FlightSearchModel {
         origin: row.origin,
         destination: row.destination,
         departureDate: new Date(row.departure_date),
-        returnDate: row.return_date ? new Date(row.return_date) : undefined,
+        ...(row.return_date && { returnDate: new Date(row.return_date) }),
         passengers: row.passengers,
         cabinClass: row.cabin_class,
         flexible: row.flexible

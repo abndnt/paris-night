@@ -1,19 +1,9 @@
 import { MessageIntent } from '../models/Chat';
-export interface IntentPattern {
-    intent: string;
-    patterns: string[];
-    entities?: string[];
-}
 export declare class NLPService {
-    private intentPatterns;
     analyzeMessage(message: string): Promise<MessageIntent>;
-    private calculatePatternMatch;
-    private extractEntities;
-    private extractLocation;
-    private extractDate;
-    private extractProgram;
-    private extractNumber;
-    private extractConfirmationCode;
+    private isGreeting;
+    private isFlightSearch;
     generateResponse(intent: MessageIntent): string;
+    generateSystemErrorResponse(): string;
 }
 //# sourceMappingURL=NLPService.d.ts.map
