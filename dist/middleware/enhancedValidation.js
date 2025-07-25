@@ -10,16 +10,18 @@ const logger_1 = require("../utils/logger");
 const security_1 = require("../utils/security");
 const validateRequest = (schema, options = {}) => {
     const { sanitize = true, abortEarly = false, stripUnknown = true, logValidationErrors = true, } = options;
-    return (req, res, next) => {
+    return (req, _res, next) => {
         const validationErrors = {};
         let hasErrors = false;
         const validatePart = (part, schema) => {
             if (!schema)
                 return;
-            if (sanitize && req[part]) {
-                req[part] = (0, security_1.sanitizeInput)(req[part]);
+            const currentValue = req[part];
+            let sanitizedValue = currentValue;
+            if (sanitize && currentValue) {
+                sanitizedValue = (0, security_1.sanitizeInput)(currentValue);
             }
-            const { error, value } = schema.validate(req[part], {
+            const { error, value } = schema.validate(sanitizedValue, {
                 abortEarly,
                 stripUnknown,
                 convert: true,
@@ -33,7 +35,9 @@ const validateRequest = (schema, options = {}) => {
                 }));
             }
             else {
-                req[part] = value;
+                if (part === 'body' || part === 'query' || part === 'params') {
+                    req[part] = value;
+                }
             }
         };
         validatePart('body', schema.body);
@@ -101,12 +105,13 @@ const validateContentType = (allowedTypes) => {
     return (req, res, next) => {
         const contentType = req.headers['content-type'];
         if (!contentType || !allowedTypes.some(type => contentType.includes(type))) {
-            return res.status(415).json({
+            res.status(415).json({
                 error: {
                     message: `Unsupported Content-Type. Allowed types: ${allowedTypes.join(', ')}`,
                     code: 'UNSUPPORTED_CONTENT_TYPE',
                 }
             });
+            return;
         }
         next();
     };
@@ -116,12 +121,13 @@ const validateRequestSize = (maxSizeBytes) => {
     return (req, res, next) => {
         const contentLength = parseInt(req.headers['content-length'] || '0', 10);
         if (contentLength > maxSizeBytes) {
-            return res.status(413).json({
+            res.status(413).json({
                 error: {
                     message: `Request entity too large. Maximum size: ${maxSizeBytes} bytes`,
                     code: 'REQUEST_ENTITY_TOO_LARGE',
                 }
             });
+            return;
         }
         next();
     };

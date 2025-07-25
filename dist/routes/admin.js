@@ -7,80 +7,80 @@ const express_1 = __importDefault(require("express"));
 const pg_1 = require("pg");
 const AnalyticsService_1 = __importDefault(require("../services/AnalyticsService"));
 const authMiddleware_1 = require("../middleware/authMiddleware");
-const logger_1 = __importDefault(require("../utils/logger"));
+const logger_1 = require("../utils/logger");
 const router = express_1.default.Router();
 const db = new pg_1.Pool();
 const analyticsService = new AnalyticsService_1.default(db);
 router.get('/analytics/dashboard', authMiddleware_1.isAdmin, async (req, res) => {
     try {
         const params = {};
-        if (req.query.startDate) {
-            params.startDate = new Date(req.query.startDate);
+        if (req.query['startDate']) {
+            params.startDate = new Date(req.query['startDate']);
         }
-        if (req.query.endDate) {
-            params.endDate = new Date(req.query.endDate);
+        if (req.query['endDate']) {
+            params.endDate = new Date(req.query['endDate']);
         }
-        if (req.query.timePeriod) {
-            params.timePeriod = req.query.timePeriod;
+        if (req.query['timePeriod']) {
+            params.timePeriod = req.query['timePeriod'];
         }
         const dashboardData = await analyticsService.getDashboardData(params);
         res.json(dashboardData);
     }
     catch (error) {
-        logger_1.default.error('Error getting dashboard analytics:', error);
+        logger_1.loggers.error('Error getting dashboard analytics:', error);
         res.status(500).json({ error: 'Failed to get analytics dashboard data' });
     }
 });
 router.get('/analytics/user-activity/:userId', authMiddleware_1.isAdmin, async (req, res) => {
     try {
-        const userId = req.params.userId;
+        const userId = req.params['userId'];
         const params = {};
-        if (req.query.limit) {
-            params.limit = parseInt(req.query.limit);
+        if (req.query['limit']) {
+            params.limit = parseInt(req.query['limit']);
         }
-        if (req.query.page) {
-            params.page = parseInt(req.query.page);
+        if (req.query['page']) {
+            params.page = parseInt(req.query['page']);
         }
         const activityHistory = await analyticsService.getUserActivityHistory(userId, params);
         res.json(activityHistory);
     }
     catch (error) {
-        logger_1.default.error('Error getting user activity history:', error);
+        logger_1.loggers.error('Error getting user activity history:', error);
         res.status(500).json({ error: 'Failed to get user activity history' });
     }
 });
 router.get('/analytics/errors', authMiddleware_1.isAdmin, async (req, res) => {
     try {
         const params = {};
-        if (req.query.startDate) {
-            params.startDate = new Date(req.query.startDate);
+        if (req.query['startDate']) {
+            params.startDate = new Date(req.query['startDate']);
         }
-        if (req.query.endDate) {
-            params.endDate = new Date(req.query.endDate);
+        if (req.query['endDate']) {
+            params.endDate = new Date(req.query['endDate']);
         }
-        if (req.query.limit) {
-            params.limit = parseInt(req.query.limit);
+        if (req.query['limit']) {
+            params.limit = parseInt(req.query['limit']);
         }
-        if (req.query.page) {
-            params.page = parseInt(req.query.page);
+        if (req.query['page']) {
+            params.page = parseInt(req.query['page']);
         }
         const errorLogs = await analyticsService.getErrorLogs(params);
         res.json(errorLogs);
     }
     catch (error) {
-        logger_1.default.error('Error getting error logs:', error);
+        logger_1.loggers.error('Error getting error logs:', error);
         res.status(500).json({ error: 'Failed to get error logs' });
     }
 });
 router.put('/analytics/errors/:errorId', authMiddleware_1.isAdmin, async (req, res) => {
     try {
-        const errorId = parseInt(req.params.errorId);
+        const errorId = parseInt(req.params['errorId'] || '0');
         const { resolved, notes } = req.body;
         await analyticsService.updateErrorResolution(errorId, resolved, notes);
         res.json({ success: true });
     }
     catch (error) {
-        logger_1.default.error('Error updating error resolution:', error);
+        logger_1.loggers.error('Error updating error resolution:', error);
         res.status(500).json({ error: 'Failed to update error resolution' });
     }
 });
@@ -88,20 +88,21 @@ router.get('/analytics/performance', authMiddleware_1.isAdmin, async (req, res) 
     try {
         const { metricName, component } = req.query;
         if (!metricName || !component) {
-            return res.status(400).json({ error: 'metricName and component are required' });
+            res.status(400).json({ error: 'metricName and component are required' });
+            return;
         }
         const params = {};
-        if (req.query.startDate) {
-            params.startDate = new Date(req.query.startDate);
+        if (req.query['startDate']) {
+            params.startDate = new Date(req.query['startDate']);
         }
-        if (req.query.endDate) {
-            params.endDate = new Date(req.query.endDate);
+        if (req.query['endDate']) {
+            params.endDate = new Date(req.query['endDate']);
         }
         const performanceHistory = await analyticsService.getPerformanceHistory(metricName, component, params);
         res.json(performanceHistory);
     }
     catch (error) {
-        logger_1.default.error('Error getting performance history:', error);
+        logger_1.loggers.error('Error getting performance history:', error);
         res.status(500).json({ error: 'Failed to get performance history' });
     }
 });
@@ -122,7 +123,7 @@ router.get('/system/health', authMiddleware_1.isAdmin, async (_req, res) => {
         res.json(systemHealth);
     }
     catch (error) {
-        logger_1.default.error('Error checking system health:', error);
+        logger_1.loggers.error('Error checking system health:', error);
         res.status(500).json({ error: 'Failed to check system health' });
     }
 });
@@ -138,7 +139,7 @@ async function checkDatabaseHealth() {
         };
     }
     catch (error) {
-        logger_1.default.error('Database health check failed:', error);
+        logger_1.loggers.error('Database health check failed:', error);
         return {
             healthy: false,
             error: 'Database connection failed',
@@ -155,7 +156,7 @@ async function checkRedisHealth() {
         };
     }
     catch (error) {
-        logger_1.default.error('Redis health check failed:', error);
+        logger_1.loggers.error('Redis health check failed:', error);
         return {
             healthy: false,
             error: 'Redis connection failed',
@@ -175,7 +176,7 @@ async function checkExternalApiHealth() {
         };
     }
     catch (error) {
-        logger_1.default.error('External API health check failed:', error);
+        logger_1.loggers.error('External API health check failed:', error);
         return {
             healthy: false,
             error: 'External API check failed',

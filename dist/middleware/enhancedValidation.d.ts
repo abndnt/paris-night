@@ -11,7 +11,7 @@ export declare const validateRequest: (schema: {
     query?: Joi.ObjectSchema;
     params?: Joi.ObjectSchema;
     headers?: Joi.ObjectSchema;
-}, options?: EnhancedValidationOptions) => (req: Request, res: Response, next: NextFunction) => void;
+}, options?: EnhancedValidationOptions) => (req: Request, _res: Response, next: NextFunction) => void;
 export declare const commonValidationSchemas: {
     pagination: Joi.ObjectSchema<any>;
     idParam: Joi.ObjectSchema<any>;

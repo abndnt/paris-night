@@ -12,7 +12,7 @@ export declare const errorTracker: {
     clearUser: () => void;
     setTag: (key: string, value: string) => void;
     setContext: (name: string, context: Record<string, any>) => void;
-    startTransaction: (name: string, operation: string) => any;
+    startTransaction: (name: string, operation: string) => void | null;
     finishTransaction: (transaction: any) => void;
     startSpan: (transaction: any, name: string, operation: string) => any;
     captureErrorWithRecovery: (error: Error, recoverySteps: string[], context?: Record<string, any>, user?: any) => void;
@@ -21,7 +21,7 @@ export declare const errorTracker: {
         details?: Record<string, any>;
     }>;
 };
-export declare const sentryErrorHandler: (error: any, req: any, res: any, next: any) => void;
-export declare const sentryRequestHandler: (req: any, res: any, next: any) => void;
+export declare const sentryErrorHandler: (error: any, _req: any, _res: any, next: any) => void;
+export declare const sentryRequestHandler: (req: any, _res: any, next: any) => void;
 export declare const sentryRequestIdMiddleware: (req: any, _res: any, next: Function) => void;
 //# sourceMappingURL=errorTracking.d.ts.map

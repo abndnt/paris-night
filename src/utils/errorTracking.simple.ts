@@ -58,16 +58,16 @@ export const testErrorTracking = async () => {
 };
 
 // Mock middleware functions
-export const sentryErrorHandler = (error: any, req: any, res: any, next: any) => {
+export const sentryErrorHandler = (error: any, _req: any, _res: any, next: any) => {
   console.error('🚨 Error handler:', error.message);
   next(error);
 };
 
-export const sentryRequestHandler = (req: any, res: any, next: any) => {
+export const sentryRequestHandler = (_req: any, _res: any, next: any) => {
   next();
 };
 
-export const sentryTracingHandler = () => (req: any, res: any, next: any) => {
+export const sentryTracingHandler = () => (_req: any, _res: any, next: any) => {
   next();
 };
 

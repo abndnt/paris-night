@@ -30,20 +30,24 @@ export const validateRequest = (schema: {
     logValidationErrors = true,
   } = options;
 
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const validationErrors: Record<string, any> = {};
     let hasErrors = false;
 
     // Helper function to validate and sanitize a part of the request
-    const validatePart = (part: keyof Request, schema?: Joi.ObjectSchema) => {
+    const validatePart = (part: 'body' | 'query' | 'params' | 'headers', schema?: Joi.ObjectSchema) => {
       if (!schema) return;
 
-      // Apply sanitization if enabled
-      if (sanitize && req[part]) {
-        req[part] = sanitizeInput(req[part]);
+      // Get the current value
+      const currentValue = req[part];
+      
+      // Apply sanitization if enabled and value exists
+      let sanitizedValue = currentValue;
+      if (sanitize && currentValue) {
+        sanitizedValue = sanitizeInput(currentValue);
       }
 
-      const { error, value } = schema.validate(req[part], {
+      const { error, value } = schema.validate(sanitizedValue, {
         abortEarly,
         stripUnknown,
         convert: true,
@@ -58,7 +62,10 @@ export const validateRequest = (schema: {
         }));
       } else {
         // Replace the request part with the validated (and potentially sanitized) value
-        req[part] = value;
+        // Only assign to writable properties
+        if (part === 'body' || part === 'query' || part === 'params') {
+          (req as any)[part] = value;
+        }
       }
     };
 
@@ -157,12 +164,13 @@ export const validateContentType = (allowedTypes: string[]) => {
     const contentType = req.headers['content-type'];
     
     if (!contentType || !allowedTypes.some(type => contentType.includes(type))) {
-      return res.status(415).json({
+      res.status(415).json({
         error: {
           message: `Unsupported Content-Type. Allowed types: ${allowedTypes.join(', ')}`,
           code: 'UNSUPPORTED_CONTENT_TYPE',
         }
       });
+      return;
     }
     
     next();
@@ -177,12 +185,13 @@ export const validateRequestSize = (maxSizeBytes: number) => {
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
     
     if (contentLength > maxSizeBytes) {
-      return res.status(413).json({
+      res.status(413).json({
         error: {
           message: `Request entity too large. Maximum size: ${maxSizeBytes} bytes`,
           code: 'REQUEST_ENTITY_TOO_LARGE',
         }
       });
+      return;
     }
     
     next();

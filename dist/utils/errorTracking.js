@@ -44,20 +44,20 @@ const initializeErrorTracking = () => {
         Sentry.init({
             dsn: config_1.config.monitoring.sentryDsn,
             environment: config_1.config.server.nodeEnv,
-            release: process.env.npm_package_version || '1.0.0',
+            release: process.env['npm_package_version'] || '1.0.0',
             tracesSampleRate: config_1.config.server.nodeEnv === 'production' ? 0.1 : 1.0,
             profilesSampleRate: config_1.config.server.nodeEnv === 'production' ? 0.05 : 0.5,
             integrations: [
-                new profiling_node_1.ProfilingIntegration(),
-                Sentry.httpIntegration({ tracing: true }),
+                (0, profiling_node_1.nodeProfilingIntegration)(),
+                Sentry.httpIntegration(),
                 Sentry.expressIntegration(),
                 Sentry.postgresIntegration(),
                 Sentry.redisIntegration(),
             ],
             beforeSend(event, hint) {
                 if (event.request?.headers) {
-                    delete event.request.headers.authorization;
-                    delete event.request.headers.cookie;
+                    delete event.request.headers['authorization'];
+                    delete event.request.headers['cookie'];
                 }
                 const originalException = hint.originalException;
                 if (originalException instanceof errors_1.BaseError) {
@@ -74,10 +74,10 @@ const initializeErrorTracking = () => {
                 return event;
             },
             beforeBreadcrumb(breadcrumb) {
-                if (breadcrumb.category === 'http' && breadcrumb.data?.url) {
-                    if (breadcrumb.data.url.includes('/auth/') ||
-                        breadcrumb.data.url.includes('token=') ||
-                        breadcrumb.data.url.includes('apiKey=')) {
+                if (breadcrumb.category === 'http' && breadcrumb.data?.['url']) {
+                    if (breadcrumb.data['url'].includes('/auth/') ||
+                        breadcrumb.data['url'].includes('token=') ||
+                        breadcrumb.data['url'].includes('apiKey=')) {
                         return null;
                     }
                 }
@@ -108,7 +108,7 @@ exports.errorTracker = {
                         role: user.role,
                     });
                 }
-                scope.setTag('version', process.env.npm_package_version || '1.0.0');
+                scope.setTag('version', process.env['npm_package_version'] || '1.0.0');
                 scope.setTag('environment', config_1.config.server.nodeEnv);
                 if (error instanceof errors_1.BaseError) {
                     scope.setFingerprint([error.name, error.statusCode.toString()]);
@@ -136,7 +136,7 @@ exports.errorTracker = {
             Sentry.addBreadcrumb({
                 message,
                 category,
-                data,
+                data: data || {},
                 timestamp: Date.now() / 1000,
             });
         }
@@ -163,7 +163,7 @@ exports.errorTracker = {
     },
     startTransaction: (name, operation) => {
         if (config_1.config.monitoring?.sentryDsn) {
-            return Sentry.startTransaction({ name, op: operation });
+            return Sentry.startSpan({ name, op: operation }, () => { });
         }
         return null;
     },
@@ -215,11 +215,8 @@ exports.errorTracker = {
             return { status: 'disabled', details: { reason: 'No Sentry DSN configured' } };
         }
         try {
-            const testTransaction = Sentry.startTransaction({
-                name: 'health-check',
-                op: 'test',
+            Sentry.startSpan({ name: 'health-check', op: 'test' }, () => {
             });
-            testTransaction.finish();
             return { status: 'healthy' };
         }
         catch (error) {
@@ -233,7 +230,7 @@ exports.errorTracker = {
         }
     }
 };
-const sentryErrorHandler = (error, req, res, next) => {
+const sentryErrorHandler = (error, _req, _res, next) => {
     const shouldHandle = error.status >= 500 ||
         error.status === 429 ||
         error.status === 413 ||
@@ -244,7 +241,7 @@ const sentryErrorHandler = (error, req, res, next) => {
     next(error);
 };
 exports.sentryErrorHandler = sentryErrorHandler;
-const sentryRequestHandler = (req, res, next) => {
+const sentryRequestHandler = (req, _res, next) => {
     Sentry.withScope((scope) => {
         if (req.user) {
             scope.setUser({
@@ -266,7 +263,7 @@ const sentryRequestHandler = (req, res, next) => {
 exports.sentryRequestHandler = sentryRequestHandler;
 const sentryRequestIdMiddleware = (req, _res, next) => {
     if (req.id) {
-        Sentry.configureScope(scope => {
+        Sentry.withScope(scope => {
             scope.setTag('requestId', req.id);
         });
     }

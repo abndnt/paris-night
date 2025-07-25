@@ -177,8 +177,8 @@ const createErrorResponse = (error, requestId) => {
             details: isProduction ? undefined : error.context,
             requestId: requestId || (0, uuid_1.v4)(),
             timestamp: new Date().toISOString(),
-            recoverySteps: friendlyError.recoverySteps,
-            retryable: friendlyError.retryable,
+            ...(friendlyError.recoverySteps && { recoverySteps: friendlyError.recoverySteps }),
+            ...(friendlyError.retryable !== undefined && { retryable: friendlyError.retryable }),
             supportReference: `ERR-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000).toString(36).toUpperCase()}`
         },
     };
@@ -190,7 +190,7 @@ const requestIdMiddleware = (req, res, next) => {
     next();
 };
 exports.requestIdMiddleware = requestIdMiddleware;
-const errorHandler = (error, req, res, next) => {
+const errorHandler = (error, req, res, _next) => {
     const requestId = req.id || (0, uuid_1.v4)();
     const startTime = req.startTime || Date.now();
     const duration = Date.now() - startTime;

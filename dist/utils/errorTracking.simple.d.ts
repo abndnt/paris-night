@@ -14,8 +14,8 @@ export declare const testErrorTracking: () => Promise<{
     status: string;
     message: string;
 }>;
-export declare const sentryErrorHandler: (error: any, req: any, res: any, next: any) => void;
-export declare const sentryRequestHandler: (req: any, res: any, next: any) => void;
-export declare const sentryTracingHandler: () => (req: any, res: any, next: any) => void;
+export declare const sentryErrorHandler: (error: any, _req: any, _res: any, next: any) => void;
+export declare const sentryRequestHandler: (_req: any, _res: any, next: any) => void;
+export declare const sentryTracingHandler: () => (_req: any, _res: any, next: any) => void;
 export declare const setupErrorTrackingForUser: (user: any) => void;
 //# sourceMappingURL=errorTracking.simple.d.ts.map

@@ -24,7 +24,6 @@ const createApp = (db, io) => {
     app.use(errorHandler_1.requestIdMiddleware);
     if (config_1.config.monitoring.sentryDsn) {
         app.use(errorTracking_1.sentryRequestHandler);
-        app.use(errorTracking_1.sentryTracingHandler);
         app.use(errorTracking_1.sentryRequestIdMiddleware);
     }
     app.use(advancedRateLimit_1.ddosProtection);
@@ -64,7 +63,7 @@ const createApp = (db, io) => {
     }));
     app.use(express_1.default.json({
         limit: '1mb',
-        verify: (req, res, buf) => {
+        verify: (req, _res, buf) => {
             req.rawBody = buf;
         }
     }));

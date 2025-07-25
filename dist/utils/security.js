@@ -28,13 +28,14 @@ const sanitizeEmail = (email) => {
     if (!validator_1.default.isEmail(email)) {
         return null;
     }
-    return validator_1.default.normalizeEmail(email, {
+    const normalized = validator_1.default.normalizeEmail(email, {
         gmail_remove_dots: false,
         gmail_remove_subaddress: false,
         outlookdotcom_remove_subaddress: false,
         yahoo_remove_subaddress: false,
         icloud_remove_subaddress: false,
     });
+    return normalized || null;
 };
 exports.sanitizeEmail = sanitizeEmail;
 const sanitizeUrl = (url, allowedDomains = []) => {
@@ -65,6 +66,9 @@ const hashPassword = (password) => {
 exports.hashPassword = hashPassword;
 const verifyPassword = (password, hashedPassword) => {
     const [salt, hash] = hashedPassword.split(':');
+    if (!salt || !hash) {
+        return false;
+    }
     const hashBuffer = Buffer.from(hash, 'hex');
     const derivedKey = (0, crypto_1.scryptSync)(password, salt, 64);
     return (0, crypto_1.timingSafeEqual)(hashBuffer, derivedKey);
@@ -178,11 +182,11 @@ const validatePhoneNumber = (phoneNumber) => {
     return phoneNumber.replace(/\D/g, '');
 };
 exports.validatePhoneNumber = validatePhoneNumber;
-const encryptData = (data, key) => {
+const encryptData = (data, _key) => {
     return `encrypted:${data}`;
 };
 exports.encryptData = encryptData;
-const decryptData = (encryptedData, key) => {
+const decryptData = (encryptedData, _key) => {
     return encryptedData.replace('encrypted:', '');
 };
 exports.decryptData = decryptData;

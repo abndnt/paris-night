@@ -5,7 +5,7 @@ import { config } from '../config';
 /**
  * Middleware to add security headers to all responses
  */
-export const securityHeadersMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const securityHeadersMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   const headers = securityHeaders();
   
   // Apply all security headers
@@ -26,7 +26,7 @@ export const securityHeadersMiddleware = (req: Request, res: Response, next: Nex
 /**
  * Middleware to prevent clickjacking
  */
-export const noClickjackingMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const noClickjackingMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader('X-Frame-Options', 'DENY');
   next();
 };
@@ -34,7 +34,7 @@ export const noClickjackingMiddleware = (req: Request, res: Response, next: Next
 /**
  * Middleware to prevent MIME type sniffing
  */
-export const noSniffMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const noSniffMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
 };
@@ -42,7 +42,7 @@ export const noSniffMiddleware = (req: Request, res: Response, next: NextFunctio
 /**
  * Middleware to enable XSS protection
  */
-export const xssProtectionMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const xssProtectionMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 };
@@ -56,7 +56,8 @@ export const httpsEnforcementMiddleware = (req: Request, res: Response, next: Ne
     
     // Redirect HTTP to HTTPS
     if (!req.secure && req.get('x-forwarded-proto') !== 'https') {
-      return res.redirect(`https://${req.headers.host}${req.url}`);
+      res.redirect(`https://${req.headers.host}${req.url}`);
+      return;
     }
   }
   
@@ -66,7 +67,7 @@ export const httpsEnforcementMiddleware = (req: Request, res: Response, next: Ne
 /**
  * Middleware to set referrer policy
  */
-export const referrerPolicyMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const referrerPolicyMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 };
@@ -74,7 +75,7 @@ export const referrerPolicyMiddleware = (req: Request, res: Response, next: Next
 /**
  * Middleware to set permissions policy
  */
-export const permissionsPolicyMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const permissionsPolicyMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), payment=(self)'
@@ -85,7 +86,7 @@ export const permissionsPolicyMiddleware = (req: Request, res: Response, next: N
 /**
  * Middleware to prevent cache for sensitive routes
  */
-export const noCacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const noCacheMiddleware = (_req: Request, res: Response, next: NextFunction): void => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -102,24 +103,26 @@ export const suspiciousRequestDetection = (req: Request, res: Response, next: Ne
   const queryString = req.url.split('?')[1] || '';
   
   if (suspiciousParams.some(param => queryString.toLowerCase().includes(param))) {
-    return res.status(403).json({
+    res.status(403).json({
       error: {
         message: 'Suspicious request detected',
         code: 'SUSPICIOUS_REQUEST',
       }
     });
+    return;
   }
   
   // Check for suspicious headers
   const suspiciousHeaders = ['x-forwarded-host', 'x-host'];
   for (const header of suspiciousHeaders) {
     if (req.headers[header]) {
-      return res.status(403).json({
+      res.status(403).json({
         error: {
           message: 'Suspicious request detected',
           code: 'SUSPICIOUS_REQUEST',
         }
       });
+      return;
     }
   }
   

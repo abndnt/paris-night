@@ -55,16 +55,16 @@ const testErrorTracking = async () => {
     return { status: 'ok', message: 'Simplified error tracking is working' };
 };
 exports.testErrorTracking = testErrorTracking;
-const sentryErrorHandler = (error, req, res, next) => {
+const sentryErrorHandler = (error, _req, _res, next) => {
     console.error('🚨 Error handler:', error.message);
     next(error);
 };
 exports.sentryErrorHandler = sentryErrorHandler;
-const sentryRequestHandler = (req, res, next) => {
+const sentryRequestHandler = (_req, _res, next) => {
     next();
 };
 exports.sentryRequestHandler = sentryRequestHandler;
-const sentryTracingHandler = () => (req, res, next) => {
+const sentryTracingHandler = () => (_req, _res, next) => {
     next();
 };
 exports.sentryTracingHandler = sentryTracingHandler;

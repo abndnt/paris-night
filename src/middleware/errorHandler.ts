@@ -201,8 +201,8 @@ const createErrorResponse = (error: BaseError, requestId?: string): ErrorRespons
       details: isProduction ? undefined : error.context,
       requestId: requestId || uuidv4(),
       timestamp: new Date().toISOString(),
-      recoverySteps: friendlyError.recoverySteps,
-      retryable: friendlyError.retryable,
+      ...(friendlyError.recoverySteps && { recoverySteps: friendlyError.recoverySteps }),
+      ...(friendlyError.retryable !== undefined && { retryable: friendlyError.retryable }),
       supportReference: `ERR-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000).toString(36).toUpperCase()}`
     },
   };
@@ -221,7 +221,7 @@ export const errorHandler = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   const requestId = (req as any).id || uuidv4();
   const startTime = (req as any).startTime || Date.now();
@@ -303,7 +303,7 @@ export const errorHandler = (
 
 // 404 handler for unmatched routes
 export const notFoundHandler = (req: Request, res: Response): void => {
-  const requestId = req.id || 'unknown';
+  const requestId = (req as any).id || 'unknown';
   
   loggers.request(req, res);
   
@@ -347,7 +347,7 @@ export const databaseErrorHandler = (error: any, req: Request, res: Response, ne
 
 // Rate limit error handler
 export const rateLimitHandler = (req: Request, res: Response): void => {
-  const requestId = req.id || 'unknown';
+  const requestId = (req as any).id || 'unknown';
   
   loggers.security('Rate limit exceeded', {
     requestId,

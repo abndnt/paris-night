@@ -61,7 +61,7 @@ exports.auditLogger = winston.createLogger({
     defaultMeta: {
         service: 'flight-search-saas-audit',
         environment: config_1.config.server.nodeEnv,
-        version: process.env.npm_package_version || '1.0.0'
+        version: process.env['npm_package_version'] || '1.0.0'
     },
     transports: [
         new winston.transports.File({
@@ -151,13 +151,13 @@ const createAuditEventFromRequest = (req, eventType, severity, details) => {
     return {
         eventType,
         severity,
-        userId: user?.id,
-        username: user?.username,
-        userEmail: user?.email,
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        requestId: req.id,
-        details,
+        userId: user?.id || 'anonymous',
+        username: user?.username || 'anonymous',
+        userEmail: user?.email || 'unknown',
+        ip: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        requestId: req.id || 'unknown',
+        details: details || {},
     };
 };
 exports.createAuditEventFromRequest = createAuditEventFromRequest;
@@ -168,22 +168,22 @@ const auditMiddleware = (eventType, severity = AuditEventSeverity.INFO, getResou
             res.end = originalEnd;
             const resourceInfo = getResourceInfo ? getResourceInfo(req) : {
                 resourceType: req.path.split('/')[1] || 'unknown',
-                resourceId: req.params.id || 'unknown',
+                resourceId: req.params['id'] || 'unknown',
                 action: req.method,
             };
             const auditEvent = {
                 eventType,
                 severity,
-                userId: req.user?.id,
-                username: req.user?.username,
-                userEmail: req.user?.email,
+                userId: req.user?.id || 'anonymous',
+                username: req.user?.username || 'anonymous',
+                userEmail: req.user?.email || 'unknown',
                 resourceType: resourceInfo.resourceType,
                 resourceId: resourceInfo.resourceId,
                 action: resourceInfo.action,
                 status: res.statusCode < 400 ? 'success' : 'failure',
-                ip: req.ip,
-                userAgent: req.get('User-Agent'),
-                requestId: req.id,
+                ip: req.ip || 'unknown',
+                userAgent: req.get('User-Agent') || 'unknown',
+                requestId: req.id || 'unknown',
                 details: {
                     method: req.method,
                     path: req.path,
@@ -208,7 +208,7 @@ const logAuthEvent = (eventType, userId, username, success, ip, userAgent, detai
         status: success ? 'success' : 'failure',
         ip,
         userAgent,
-        details,
+        details: details || {},
     });
 };
 exports.logAuthEvent = logAuthEvent;
@@ -224,7 +224,7 @@ const logDataAccessEvent = (userId, username, resourceType, resourceId, action, 
         status: 'success',
         ip,
         userAgent,
-        details,
+        details: details || {},
     });
 };
 exports.logDataAccessEvent = logDataAccessEvent;
@@ -239,7 +239,7 @@ const logGdprEvent = (eventType, userId, username, userEmail, ip, userAgent, det
         status: 'success',
         ip,
         userAgent,
-        details,
+        details: details || {},
     });
 };
 exports.logGdprEvent = logGdprEvent;
@@ -266,12 +266,12 @@ const logSecurityEvent = (eventType, severity, ip, userAgent, userId, details) =
     (0, exports.logAuditEvent)({
         eventType,
         severity,
-        userId,
+        userId: userId || 'anonymous',
         action: eventType.toString(),
         status: 'failure',
         ip,
         userAgent,
-        details,
+        details: details || {},
     });
 };
 exports.logSecurityEvent = logSecurityEvent;

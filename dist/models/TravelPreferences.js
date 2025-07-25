@@ -110,7 +110,7 @@ class TravelPreferencesModel {
     async delete(userId) {
         const query = 'DELETE FROM travel_preferences WHERE user_id = $1';
         const result = await this.db.query(query, [userId]);
-        return result.rowCount > 0;
+        return (result.rowCount ?? 0) > 0;
     }
     async upsert(preferencesData) {
         const existing = await this.findByUserId(preferencesData.userId);

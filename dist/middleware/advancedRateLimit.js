@@ -10,7 +10,7 @@ const createAdvancedRateLimit = (options) => {
         const ip = options.trustProxy && req.headers['x-forwarded-for']
             ? (Array.isArray(req.headers['x-forwarded-for'])
                 ? req.headers['x-forwarded-for'][0]
-                : req.headers['x-forwarded-for'].split(',')[0].trim())
+                : req.headers['x-forwarded-for']?.split(',')[0]?.trim())
             : req.ip;
         const userId = req.user?.id || 'anonymous';
         const path = req.path || req.originalUrl || '/';
@@ -21,19 +21,20 @@ const createAdvancedRateLimit = (options) => {
             const ip = trustProxy && req.headers['x-forwarded-for']
                 ? (Array.isArray(req.headers['x-forwarded-for'])
                     ? req.headers['x-forwarded-for'][0]
-                    : req.headers['x-forwarded-for'].split(',')[0].trim())
-                : req.ip;
-            if (whitelist.includes(ip)) {
+                    : req.headers['x-forwarded-for']?.split(',')[0]?.trim())
+                : req.ip || 'unknown';
+            if (ip && whitelist.includes(ip)) {
                 return next();
             }
-            if (blacklist.includes(ip)) {
+            if (ip && blacklist.includes(ip)) {
                 logger_1.loggers.security('Blocked blacklisted IP', { ip, url: req.originalUrl });
-                return res.status(403).json({
+                res.status(403).json({
                     error: {
                         message: 'Access denied',
                         code: 'BLACKLISTED',
                     }
                 });
+                return;
             }
             if (skip && skip(req, res)) {
                 return next();
@@ -100,13 +101,14 @@ const createAdvancedRateLimit = (options) => {
                 if (legacyHeaders) {
                     res.setHeader('Retry-After', retryAfter);
                 }
-                return res.status(429).json({
+                res.status(429).json({
                     error: {
                         message,
                         code: 'RATE_LIMIT_EXCEEDED',
                         retryAfter: `${retryAfter} seconds`,
                     }
                 });
+                return;
             }
             await database_1.redisClient.incr(key);
             if (skipSuccessfulRequests || skipFailedRequests) {
@@ -162,7 +164,7 @@ exports.apiRateLimit = (0, exports.createAdvancedRateLimit)({
     standardHeaders: true,
     trustProxy: true,
     keyGenerator: (req) => {
-        const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+        const apiKey = req.headers['x-api-key'] || req.query['apiKey'];
         const ip = req.ip || 'unknown';
         return `api_rate_limit:${apiKey || ip}`;
     },

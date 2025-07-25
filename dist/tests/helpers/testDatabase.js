@@ -13,11 +13,11 @@ const pg_1 = require("pg");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const testDbConfig = {
-    host: process.env.TEST_DB_HOST || 'localhost',
-    port: parseInt(process.env.TEST_DB_PORT || '5432'),
-    database: process.env.TEST_DB_NAME || 'flight_search_test',
-    user: process.env.TEST_DB_USER || 'test_user',
-    password: process.env.TEST_DB_PASSWORD || 'test_password',
+    host: process.env['TEST_DB_HOST'] || 'localhost',
+    port: parseInt(process.env['TEST_DB_PORT'] || '5432'),
+    database: process.env['TEST_DB_NAME'] || 'flight_search_test',
+    user: process.env['TEST_DB_USER'] || 'test_user',
+    password: process.env['TEST_DB_PASSWORD'] || 'test_password',
 };
 let testPool;
 async function setupTestDatabase() {
