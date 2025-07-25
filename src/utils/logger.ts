@@ -48,7 +48,7 @@ export const logger = winston.createLogger({
   defaultMeta: { 
     service: 'flight-search-saas',
     environment: config.server.nodeEnv,
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env['npm_package_version'] || '1.0.0'
   },
   transports: [
     // Error logs

@@ -6,6 +6,10 @@ export interface AirlineConfig {
   apiKey: string;
   baseUrl: string;
   timeout: number;
+  credentials?: {
+    clientId?: string;
+    clientSecret?: string;
+  };
   rateLimit: {
     requestsPerMinute: number;
     requestsPerHour: number;
@@ -21,6 +25,9 @@ export interface AirlineSearchRequest {
   searchCriteria: SearchCriteria;
   requestId: string;
   timestamp: Date;
+  preferences?: {
+    maxResults?: number;
+  };
 }
 
 export interface AirlineSearchResponse {

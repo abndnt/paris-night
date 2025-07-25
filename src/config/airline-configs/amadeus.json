@@ -1,0 +1,22 @@
+{
+  "name": "amadeus",
+  "baseUrl": "https://api.amadeus.com/v2",
+  "apiKey": "your-amadeus-api-key",
+  "timeout": 15000,
+  "rateLimit": {
+    "requestsPerMinute": 60,
+    "requestsPerHour": 2000
+  },
+  "retryConfig": {
+    "maxRetries": 3,
+    "backoffMultiplier": 2,
+    "initialDelay": 1000
+  },
+  "credentials": {
+    "clientId": "your-amadeus-client-id",
+    "clientSecret": "your-amadeus-client-secret"
+  },
+  "environment": "test",
+  "lastUpdated": "2024-01-01T00:00:00.000Z",
+  "version": "1.0.0"
+}

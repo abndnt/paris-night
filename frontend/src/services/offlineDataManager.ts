@@ -59,6 +59,7 @@ class OfflineDataManager {
     }
 
     const db = await this.dbPromise;
+    if (!db) throw new Error('Database not available');
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
 
@@ -87,6 +88,7 @@ class OfflineDataManager {
 
     try {
       const db = await this.dbPromise;
+      if (!db) throw new Error('Database not available');
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       
@@ -121,6 +123,7 @@ class OfflineDataManager {
 
     try {
       const db = await this.dbPromise;
+      if (!db) throw new Error('Database not available');
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
       
@@ -146,6 +149,7 @@ class OfflineDataManager {
     }
 
     const db = await this.dbPromise;
+    if (!db) throw new Error('Database not available');
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     
@@ -162,6 +166,7 @@ class OfflineDataManager {
     }
 
     const db = await this.dbPromise;
+    if (!db) throw new Error('Database not available');
     const now = Date.now();
     const storeNames: (keyof OfflineStore)[] = ['searches', 'bookings', 'userPreferences'];
     

@@ -18,7 +18,7 @@ const PassengerInfoStep: React.FC = () => {
   useEffect(() => {
     // Initialize with at least one passenger if none exist
     if (passengers.length === 0 && selectedFlight) {
-      const passengerCount = selectedFlight.route[0]?.passengers?.adults || 1;
+      const passengerCount = 1; // Default to 1 passenger
       const initialPassengers: PassengerInfo[] = Array.from({ length: passengerCount }, () => ({
         firstName: '',
         lastName: '',

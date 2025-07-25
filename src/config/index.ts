@@ -50,6 +50,11 @@ export const config = {
     level: process.env['LOG_LEVEL'] || 'info',
   },
 
+  // Monitoring (simplified for testing)
+  monitoring: {
+    sentryDsn: process.env['SENTRY_DSN'] || null,
+  },
+
   // LLM configuration (Requesty API)
   llm: {
     baseUrl: process.env['REQUESTY_BASE_URL'] || 'https://router.requesty.ai/v1',

@@ -13,7 +13,7 @@ export abstract class BaseError extends Error {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
-    this.context = context;
+    this.context = context || {};
 
     // Maintains proper stack trace for where our error was thrown
     Error.captureStackTrace(this, this.constructor);
@@ -217,7 +217,7 @@ export class ErrorFactory {
           message = 'Database table not found';
           break;
         default:
-          context.code = error.code;
+          context['code'] = error.code;
       }
     }
 
@@ -241,8 +241,8 @@ export class ErrorFactory {
     };
 
     if (error.response) {
-      context.status = error.response.status;
-      context.statusText = error.response.statusText;
+      context['status'] = error.response.status;
+      context['statusText'] = error.response.statusText;
     }
 
     return new ExternalServiceError(service, error.message, context);

@@ -8,7 +8,6 @@ import {
   loadBookingDetailsError,
   startModification,
   modificationSuccess,
-  modificationError,
   updatePassengers,
   updatePaymentMethod,
   updateContactInfo,
@@ -131,7 +130,7 @@ const BookingModification: React.FC = () => {
       // Navigate back to booking details
       navigate(`/booking/${bookingId}`);
     } catch (error) {
-      dispatch(modificationError(error instanceof Error ? error.message : 'Failed to update booking'));
+      console.error('Failed to update booking:', error);
     }
   };
 

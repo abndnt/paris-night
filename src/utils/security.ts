@@ -36,13 +36,14 @@ export const sanitizeEmail = (email: string): string | null => {
   if (!validator.isEmail(email)) {
     return null;
   }
-  return validator.normalizeEmail(email, {
+  const normalized = validator.normalizeEmail(email, {
     gmail_remove_dots: false,
     gmail_remove_subaddress: false,
     outlookdotcom_remove_subaddress: false,
     yahoo_remove_subaddress: false,
     icloud_remove_subaddress: false,
   });
+  return normalized || null;
 };
 
 /**
@@ -100,6 +101,9 @@ export const hashPassword = (password: string): string => {
  */
 export const verifyPassword = (password: string, hashedPassword: string): boolean => {
   const [salt, hash] = hashedPassword.split(':');
+  if (!salt || !hash) {
+    return false;
+  }
   const hashBuffer = Buffer.from(hash, 'hex');
   const derivedKey = scryptSync(password, salt, 64);
   return timingSafeEqual(hashBuffer, derivedKey);
@@ -275,7 +279,7 @@ export const validatePhoneNumber = (phoneNumber: string): string | null => {
  * @param key - Encryption key
  * @returns Encrypted data
  */
-export const encryptData = (data: string, key: string): string => {
+export const encryptData = (data: string, _key: string): string => {
   // This is a placeholder - in a real implementation, use a proper encryption library
   // like node-forge, crypto-js, or the Node.js crypto module with proper key management
   return `encrypted:${data}`;
@@ -287,7 +291,7 @@ export const encryptData = (data: string, key: string): string => {
  * @param key - Encryption key
  * @returns Decrypted data
  */
-export const decryptData = (encryptedData: string, key: string): string => {
+export const decryptData = (encryptedData: string, _key: string): string => {
   // This is a placeholder - in a real implementation, use a proper encryption library
   // like node-forge, crypto-js, or the Node.js crypto module with proper key management
   return encryptedData.replace('encrypted:', '');

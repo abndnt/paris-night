@@ -33,9 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AirlineCacheService = void 0;
+exports.AirlineCache = void 0;
 const crypto = __importStar(require("crypto"));
-class AirlineCacheService {
+class AirlineCache {
     constructor(redis, keyPrefix = 'airline_cache', defaultTtl = 300) {
         this.redis = redis;
         this.keyPrefix = keyPrefix;
@@ -185,5 +185,5 @@ class AirlineCacheService {
         }
     }
 }
-exports.AirlineCacheService = AirlineCacheService;
+exports.AirlineCache = AirlineCache;
 //# sourceMappingURL=AirlineCache.js.map

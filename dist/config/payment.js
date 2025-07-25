@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validatePaymentConfig = exports.getPaymentConfig = void 0;
 const getPaymentConfig = () => {
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeSecretKey = process.env['STRIPE_SECRET_KEY'];
+    const stripeWebhookSecret = process.env['STRIPE_WEBHOOK_SECRET'];
     if (!stripeSecretKey) {
         throw new Error('STRIPE_SECRET_KEY environment variable is required');
     }
@@ -14,23 +14,23 @@ const getPaymentConfig = () => {
         stripe: {
             secretKey: stripeSecretKey,
             webhookSecret: stripeWebhookSecret,
-            apiVersion: process.env.STRIPE_API_VERSION || '2023-10-16'
+            apiVersion: process.env['STRIPE_API_VERSION'] || '2023-10-16'
         },
-        defaultCurrency: process.env.DEFAULT_CURRENCY || 'USD',
-        supportedCurrencies: (process.env.SUPPORTED_CURRENCIES || 'USD,EUR,GBP,CAD,AUD').split(','),
-        maxRefundDays: parseInt(process.env.MAX_REFUND_DAYS || '30', 10),
-        enablePointsPayments: process.env.ENABLE_POINTS_PAYMENTS !== 'false',
-        enableMixedPayments: process.env.ENABLE_MIXED_PAYMENTS !== 'false',
+        defaultCurrency: process.env['DEFAULT_CURRENCY'] || 'USD',
+        supportedCurrencies: (process.env['SUPPORTED_CURRENCIES'] || 'USD,EUR,GBP,CAD,AUD').split(','),
+        maxRefundDays: parseInt(process.env['MAX_REFUND_DAYS'] || '30', 10),
+        enablePointsPayments: process.env['ENABLE_POINTS_PAYMENTS'] !== 'false',
+        enableMixedPayments: process.env['ENABLE_MIXED_PAYMENTS'] !== 'false',
         receiptSettings: {
-            enableEmailReceipts: process.env.ENABLE_EMAIL_RECEIPTS !== 'false',
-            defaultLanguage: process.env.DEFAULT_RECEIPT_LANGUAGE || 'en',
-            supportedLanguages: (process.env.SUPPORTED_RECEIPT_LANGUAGES || 'en,es,fr,de').split(','),
-            pdfGeneration: process.env.ENABLE_PDF_RECEIPTS !== 'false'
+            enableEmailReceipts: process.env['ENABLE_EMAIL_RECEIPTS'] !== 'false',
+            defaultLanguage: process.env['DEFAULT_RECEIPT_LANGUAGE'] || 'en',
+            supportedLanguages: (process.env['SUPPORTED_RECEIPT_LANGUAGES'] || 'en,es,fr,de').split(','),
+            pdfGeneration: process.env['ENABLE_PDF_RECEIPTS'] !== 'false'
         },
         webhookSettings: {
-            enableWebhooks: process.env.ENABLE_PAYMENT_WEBHOOKS !== 'false',
-            retryAttempts: parseInt(process.env.WEBHOOK_RETRY_ATTEMPTS || '3', 10),
-            retryDelayMs: parseInt(process.env.WEBHOOK_RETRY_DELAY_MS || '1000', 10)
+            enableWebhooks: process.env['ENABLE_PAYMENT_WEBHOOKS'] !== 'false',
+            retryAttempts: parseInt(process.env['WEBHOOK_RETRY_ATTEMPTS'] || '3', 10),
+            retryDelayMs: parseInt(process.env['WEBHOOK_RETRY_DELAY_MS'] || '1000', 10)
         }
     };
 };

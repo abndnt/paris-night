@@ -8,9 +8,10 @@ import TypingIndicator from './TypingIndicator';
 interface ChatMessagesProps {
   messages: Message[];
   sessionId: string;
+  isMobile?: boolean;
 }
 
-const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, sessionId }) => {
+const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, sessionId, isMobile }) => {
   const { assistantTyping } = useSelector((state: RootState) => state.chat);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

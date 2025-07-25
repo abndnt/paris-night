@@ -21,7 +21,7 @@ const ErrorLogs: React.FC = () => {
   const dateRange = useSelector(selectDateRange);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
-  const [selectedError, setSelectedError] = useState<number | null>(null);
+  const [selectedError, setSelectedError] = useState<string | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
   // Fetch error logs on component mount and when date range changes
@@ -46,7 +46,7 @@ const ErrorLogs: React.FC = () => {
   };
 
   // Handle error resolution
-  const handleResolveError = (errorId: number) => {
+  const handleResolveError = (errorId: string) => {
     dispatch(updateErrorResolution({
       errorId,
       resolved: true,
@@ -175,7 +175,7 @@ const ErrorLogs: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => setSelectedError(error.id || 0)}
+                      onClick={() => setSelectedError(error.id || '')}
                       className="text-blue-600 hover:text-blue-900 mr-3"
                     >
                       Details
@@ -183,7 +183,7 @@ const ErrorLogs: React.FC = () => {
                     {!error.resolved && (
                       <button
                         onClick={() => {
-                          setSelectedError(error.id || 0);
+                          setSelectedError(error.id || '');
                           setResolutionNotes('');
                         }}
                         className="text-green-600 hover:text-green-900"

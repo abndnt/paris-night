@@ -34,11 +34,8 @@ class ErrorHandlingService {
       release: process.env.REACT_APP_VERSION || '1.0.0',
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
       integrations: [
-        new Sentry.BrowserTracing(),
-        new Sentry.Replay({
-          maskAllText: true,
-          blockAllMedia: true,
-        }),
+        // BrowserTracing and Replay integrations are not available in this version
+        // Add other integrations as needed
       ],
       beforeSend(event) {
         // Filter out sensitive information

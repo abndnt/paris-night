@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AnalyticsDashboardData, ErrorAnalytics, PerformanceMetric, UserActivity } from '../../../src/models/Analytics';
+import { AnalyticsDashboardData, ErrorAnalytics, PerformanceMetrics, UserActivity } from '../../models/Analytics';
 import { RootState } from '../store';
 import api from '../../services/api';
 
 interface AdminState {
   dashboardData: AnalyticsDashboardData | null;
-  errorLogs: ErrorAnalytics[];
-  userActivity: UserActivity[];
-  performanceMetrics: PerformanceMetric[];
+  errorLogs: any[];
+  userActivity: any[];
+  performanceMetrics: any[];
   systemHealth: {
     status: 'healthy' | 'degraded' | 'down';
     components: {
@@ -73,10 +73,8 @@ export const fetchDashboardData = createAsyncThunk(
   'admin/fetchDashboardData',
   async (dateRange: { startDate: string; endDate: string }, { rejectWithValue }) => {
     try {
-      const response = await api.get('/admin/analytics/dashboard', {
-        params: dateRange,
-      });
-      return response.data;
+      const response = await api.get('/admin/analytics/dashboard');
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch dashboard data');
     }
@@ -87,10 +85,8 @@ export const fetchErrorLogs = createAsyncThunk(
   'admin/fetchErrorLogs',
   async (params: { startDate?: string; endDate?: string; page?: number; limit?: number }, { rejectWithValue }) => {
     try {
-      const response = await api.get('/admin/analytics/errors', {
-        params,
-      });
-      return response.data;
+      const response = await api.get('/admin/analytics/errors');
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch error logs');
     }
@@ -100,7 +96,7 @@ export const fetchErrorLogs = createAsyncThunk(
 export const updateErrorResolution = createAsyncThunk(
   'admin/updateErrorResolution',
   async (
-    { errorId, resolved, notes }: { errorId: number; resolved: boolean; notes?: string },
+    { errorId, resolved, notes }: { errorId: string; resolved: boolean; notes?: string },
     { rejectWithValue, dispatch }
   ) => {
     try {
@@ -126,10 +122,8 @@ export const fetchUserActivity = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await api.get(`/admin/analytics/user-activity/${userId}`, {
-        params: { page, limit },
-      });
-      return response.data;
+      const response = await api.get(`/admin/analytics/user-activity/${userId}`);
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch user activity');
     }
@@ -153,15 +147,8 @@ export const fetchPerformanceMetrics = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await api.get('/admin/analytics/performance', {
-        params: {
-          metricName,
-          component,
-          startDate,
-          endDate,
-        },
-      });
-      return response.data;
+      const response = await api.get('/admin/analytics/performance');
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch performance metrics');
     }
@@ -173,7 +160,7 @@ export const fetchSystemHealth = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get('/admin/system/health');
-      return response.data;
+      return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to fetch system health');
     }
@@ -206,7 +193,7 @@ const adminSlice = createSlice({
       })
       .addCase(fetchDashboardData.fulfilled, (state, action) => {
         state.loading.dashboard = false;
-        state.dashboardData = action.payload;
+        state.dashboardData = action.payload as AnalyticsDashboardData;
       })
       .addCase(fetchDashboardData.rejected, (state, action) => {
         state.loading.dashboard = false;
@@ -221,7 +208,14 @@ const adminSlice = createSlice({
       })
       .addCase(fetchErrorLogs.fulfilled, (state, action) => {
         state.loading.errors = false;
-        state.errorLogs = action.payload;
+        // Handle both array and object responses
+        if (Array.isArray(action.payload)) {
+          state.errorLogs = action.payload;
+        } else if (action.payload && typeof action.payload === 'object' && 'recentErrors' in action.payload) {
+          state.errorLogs = (action.payload as any).recentErrors || [];
+        } else {
+          state.errorLogs = [];
+        }
       })
       .addCase(fetchErrorLogs.rejected, (state, action) => {
         state.loading.errors = false;
@@ -236,7 +230,7 @@ const adminSlice = createSlice({
       })
       .addCase(fetchUserActivity.fulfilled, (state, action) => {
         state.loading.userActivity = false;
-        state.userActivity = action.payload;
+        state.userActivity = action.payload as any[];
       })
       .addCase(fetchUserActivity.rejected, (state, action) => {
         state.loading.userActivity = false;
@@ -251,7 +245,7 @@ const adminSlice = createSlice({
       })
       .addCase(fetchPerformanceMetrics.fulfilled, (state, action) => {
         state.loading.performance = false;
-        state.performanceMetrics = action.payload;
+        state.performanceMetrics = action.payload as any[];
       })
       .addCase(fetchPerformanceMetrics.rejected, (state, action) => {
         state.loading.performance = false;
@@ -266,7 +260,7 @@ const adminSlice = createSlice({
       })
       .addCase(fetchSystemHealth.fulfilled, (state, action) => {
         state.loading.systemHealth = false;
-        state.systemHealth = action.payload;
+        state.systemHealth = action.payload as any;
       })
       .addCase(fetchSystemHealth.rejected, (state, action) => {
         state.loading.systemHealth = false;

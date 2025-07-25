@@ -1,20 +1,25 @@
 import React from 'react';
 
 interface LoadingSpinnerProps {
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
   color?: 'blue' | 'white' | 'gray';
+  className?: string;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   size = 'medium', 
-  color = 'blue' 
+  color = 'blue',
+  className = ''
 }) => {
+  // Normalize size to handle both formats
+  const normalizedSize = size === 'sm' ? 'small' : size === 'md' ? 'medium' : size === 'lg' ? 'large' : size;
+  
   // Determine size class
   const sizeClass = {
     small: 'w-4 h-4',
     medium: 'w-8 h-8',
     large: 'w-12 h-12',
-  }[size];
+  }[normalizedSize];
 
   // Determine color classes
   const colorClass = {
@@ -24,7 +29,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   }[color];
 
   return (
-    <div className="flex justify-center items-center p-4" data-testid="loading-spinner">
+    <div className={`flex justify-center items-center ${className}`} data-testid="loading-spinner">
       <svg 
         className={`animate-spin ${sizeClass} ${colorClass}`} 
         xmlns="http://www.w3.org/2000/svg" 

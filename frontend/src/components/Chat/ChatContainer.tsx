@@ -44,7 +44,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ className = '' }) => {
 
   useEffect(() => {
     if (isAuthenticated && token) {
-      chatWebSocketService.connect(token);
+      chatWebSocketService.connect();
     }
 
     return () => {

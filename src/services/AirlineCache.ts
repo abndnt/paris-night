@@ -1,9 +1,9 @@
 import { RedisClientType } from 'redis';
-import { AirlineCache, AirlineSearchResponse } from '../adapters/BaseAirlineAdapter';
+import { AirlineCache as IAirlineCache, AirlineSearchResponse } from '../adapters/BaseAirlineAdapter';
 import { SearchCriteria } from '../models/FlightSearch';
 import * as crypto from 'crypto';
 
-export class AirlineCacheService implements AirlineCache {
+export class AirlineCache implements IAirlineCache {
   private redis: RedisClientType;
   private keyPrefix: string;
   private defaultTtl: number;

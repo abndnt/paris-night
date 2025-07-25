@@ -1,10 +1,7 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = require("http");
-const app_1 = __importDefault(require("./app"));
+const app_1 = require("./app");
 const config_1 = require("../config");
 const database_1 = require("../config/database");
 const ChatService_1 = require("../services/ChatService");
@@ -15,8 +12,12 @@ const logger_1 = require("./logger");
 const startServer = async () => {
     try {
         await (0, database_1.initializeDatabase)();
-        const server = (0, http_1.createServer)(app_1.default);
+        const app = (0, app_1.createApp)(database_1.database);
+        const server = (0, http_1.createServer)(app);
         const chatService = new ChatService_1.ChatService(server, database_1.database);
+        const appWithSocket = (0, app_1.createApp)(database_1.database, chatService.getIO());
+        server.removeAllListeners('request');
+        server.on('request', appWithSocket);
         const adapterFactory = new AirlineAdapterFactory_1.AirlineAdapterFactory({ redisClient: database_1.redisClient });
         const searchOrchestrator = new FlightSearchOrchestrator_1.FlightSearchOrchestrator(database_1.database, database_1.redisClient, adapterFactory, chatService.getIO(), {
             maxConcurrentSearches: 10,

@@ -5,6 +5,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  isAdmin?: boolean;
 }
 
 interface AuthState {
@@ -12,6 +13,7 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  loading: boolean; // Alias for isLoading for backward compatibility
   error: string | null;
 }
 
@@ -20,6 +22,7 @@ const initialState: AuthState = {
   token: localStorage.getItem('token'),
   isAuthenticated: false,
   isLoading: false,
+  loading: false,
   error: null,
 };
 
@@ -29,10 +32,12 @@ const authSlice = createSlice({
   reducers: {
     loginStart: (state) => {
       state.isLoading = true;
+      state.loading = true;
       state.error = null;
     },
     loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
       state.isLoading = false;
+      state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
       state.token = action.payload.token;
@@ -41,6 +46,7 @@ const authSlice = createSlice({
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
+      state.loading = false;
       state.isAuthenticated = false;
       state.user = null;
       state.token = null;

@@ -1,8 +1,9 @@
 import { IAirlineAdapter, AirlineConfig } from '../adapters/BaseAirlineAdapter';
 import { MockAirlineAdapter } from '../adapters/MockAirlineAdapter';
+import { AmadeusAdapter } from '../adapters/AmadeusAdapter';
 import { AirlineConfigManager, ConfigurationSource, ManagedAirlineConfig } from '../services/AirlineConfigManager';
 import { AirlineRateLimiter } from '../services/AirlineRateLimiter';
-import { AirlineCacheService } from '../services/AirlineCache';
+import { AirlineCache } from '../services/AirlineCache';
 import { RedisClientType } from 'redis';
 import * as path from 'path';
 
@@ -17,14 +18,14 @@ export class AirlineAdapterFactory {
   private configManager: AirlineConfigManager;
   private redisClient: RedisClientType;
   private rateLimiter: AirlineRateLimiter;
-  private cache: AirlineCacheService;
+  private cache: AirlineCache;
   private adapters: Map<string, IAirlineAdapter> = new Map();
 
   constructor(options: AdapterFactoryOptions) {
     this.redisClient = options.redisClient;
     this.configManager = options.configManager || new AirlineConfigManager(options.encryptionKey);
     this.rateLimiter = new AirlineRateLimiter(this.redisClient);
-    this.cache = new AirlineCacheService(this.redisClient);
+    this.cache = new AirlineCache(this.redisClient);
   }
 
   /**
@@ -50,10 +51,17 @@ export class AirlineAdapterFactory {
         (adapter as any).name = airlineName;
         break;
       case 'real':
-        // In a real implementation, this would create specific airline adapters
-        // For now, we'll use the mock adapter
-        adapter = new MockAirlineAdapter(config, this.rateLimiter, this.cache);
-        (adapter as any).name = airlineName;
+        // Create specific airline adapters based on airline name
+        switch (airlineName.toLowerCase()) {
+          case 'amadeus':
+            adapter = new AmadeusAdapter(config, this.rateLimiter, this.cache);
+            break;
+          default:
+            // Fallback to mock adapter for unsupported airlines
+            adapter = new MockAirlineAdapter(config, this.rateLimiter, this.cache);
+            (adapter as any).name = airlineName;
+            break;
+        }
         break;
       default:
         throw new Error(`Unsupported adapter type: ${adapterType}`);

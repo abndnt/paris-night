@@ -7,9 +7,10 @@ import chatWebSocketService from '../../services/chatWebSocketService';
 interface ChatInputProps {
   sessionId: string;
   disabled?: boolean;
+  isMobile?: boolean;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ sessionId, disabled = false }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ sessionId, disabled = false, isMobile }) => {
   const dispatch = useDispatch();
   const { isTyping } = useSelector((state: RootState) => state.chat);
   const [message, setMessage] = useState('');

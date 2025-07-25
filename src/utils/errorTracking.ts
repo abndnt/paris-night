@@ -1,30 +1,30 @@
 import * as Sentry from '@sentry/node';
-import { ProfilingIntegration } from '@sentry/profiling-node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { config } from '../config';
 import { logger } from './logger';
 import { BaseError } from './errors';
 
 // Initialize Sentry
 export const initializeErrorTracking = (): void => {
-  if (config.monitoring.sentryDsn) {
+  if (config.monitoring?.sentryDsn) {
     Sentry.init({
       dsn: config.monitoring.sentryDsn,
       environment: config.server.nodeEnv,
-      release: process.env.npm_package_version || '1.0.0',
+      release: process.env['npm_package_version'] || '1.0.0',
       tracesSampleRate: config.server.nodeEnv === 'production' ? 0.1 : 1.0,
       profilesSampleRate: config.server.nodeEnv === 'production' ? 0.05 : 0.5,
       integrations: [
-        new ProfilingIntegration(),
-        new Sentry.Integrations.Http({ tracing: true }),
-        new Sentry.Integrations.Express({ app: undefined }),
-        new Sentry.Integrations.Postgres(),
-        new Sentry.Integrations.Redis(),
+        nodeProfilingIntegration(),
+        Sentry.httpIntegration(),
+        Sentry.expressIntegration(),
+        Sentry.postgresIntegration(),
+        Sentry.redisIntegration(),
       ],
       beforeSend(event, hint) {
         // Filter out sensitive information
         if (event.request?.headers) {
-          delete event.request.headers.authorization;
-          delete event.request.headers.cookie;
+          delete event.request.headers['authorization'];
+          delete event.request.headers['cookie'];
         }
         
         // Add error context for custom errors
@@ -45,12 +45,12 @@ export const initializeErrorTracking = (): void => {
       },
       beforeBreadcrumb(breadcrumb) {
         // Filter sensitive breadcrumbs
-        if (breadcrumb.category === 'http' && breadcrumb.data?.url) {
+        if (breadcrumb.category === 'http' && breadcrumb.data?.['url']) {
           // Filter auth endpoints and any paths with tokens
           if (
-            breadcrumb.data.url.includes('/auth/') || 
-            breadcrumb.data.url.includes('token=') ||
-            breadcrumb.data.url.includes('apiKey=')
+            breadcrumb.data['url'].includes('/auth/') ||
+            breadcrumb.data['url'].includes('token=') ||
+            breadcrumb.data['url'].includes('apiKey=')
           ) {
             return null;
           }
@@ -69,7 +69,7 @@ export const initializeErrorTracking = (): void => {
 export const errorTracker = {
   // Capture exception with context
   captureException: (error: Error, context?: Record<string, any>, user?: any) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach(key => {
@@ -86,7 +86,7 @@ export const errorTracker = {
         }
         
         // Add service version and environment
-        scope.setTag('version', process.env.npm_package_version || '1.0.0');
+        scope.setTag('version', process.env['npm_package_version'] || '1.0.0');
         scope.setTag('environment', config.server.nodeEnv);
         
         // Add error fingerprinting for grouping similar errors
@@ -104,7 +104,7 @@ export const errorTracker = {
 
   // Capture message with level
   captureMessage: (message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, any>) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach(key => {
@@ -120,11 +120,11 @@ export const errorTracker = {
 
   // Add breadcrumb
   addBreadcrumb: (message: string, category: string, data?: Record<string, any>) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.addBreadcrumb({
         message,
         category,
-        data,
+        data: data || {},
         timestamp: Date.now() / 1000,
       });
     }
@@ -132,36 +132,36 @@ export const errorTracker = {
 
   // Set user context
   setUser: (user: { id: string; email?: string; username?: string; role?: string }) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.setUser(user);
     }
   },
 
   // Clear user context
   clearUser: () => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.setUser(null);
     }
   },
 
   // Set tag
   setTag: (key: string, value: string) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.setTag(key, value);
     }
   },
 
   // Set extra context
   setContext: (name: string, context: Record<string, any>) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.setContext(name, context);
     }
   },
 
   // Performance monitoring
   startTransaction: (name: string, operation: string) => {
-    if (config.monitoring.sentryDsn) {
-      return Sentry.startTransaction({ name, op: operation });
+    if (config.monitoring?.sentryDsn) {
+      return Sentry.startSpan({ name, op: operation }, () => {});
     }
     return null;
   },
@@ -186,7 +186,7 @@ export const errorTracker = {
   
   // Capture error with recovery info
   captureErrorWithRecovery: (error: Error, recoverySteps: string[], context?: Record<string, any>, user?: any) => {
-    if (config.monitoring.sentryDsn) {
+    if (config.monitoring?.sentryDsn) {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach(key => {
@@ -223,18 +223,15 @@ export const errorTracker = {
   
   // Health check for error tracking system
   healthCheck: async (): Promise<{ status: string; details?: Record<string, any> }> => {
-    if (!config.monitoring.sentryDsn) {
+    if (!config.monitoring?.sentryDsn) {
       return { status: 'disabled', details: { reason: 'No Sentry DSN configured' } };
     }
     
     try {
       // Test sending a transaction to Sentry
-      const testTransaction = Sentry.startTransaction({
-        name: 'health-check',
-        op: 'test',
+      Sentry.startSpan({ name: 'health-check', op: 'test' }, () => {
+        // Test span completed
       });
-      
-      testTransaction.finish();
       
       return { status: 'healthy' };
     } catch (error) {
@@ -250,39 +247,48 @@ export const errorTracker = {
 };
 
 // Express error handler middleware
-export const sentryErrorHandler = Sentry.Handlers.errorHandler({
-  shouldHandleError(error) {
-    // Send all server errors and non-operational errors to Sentry
-    if (error.status >= 500) return true;
-    
-    // Also track specific 4xx errors that might indicate issues
-    if (error.status === 429) return true; // Rate limiting
-    if (error.status === 413) return true; // Payload too large
-    
-    // Track non-operational errors (bugs)
-    if (error instanceof BaseError && !error.isOperational) {
-      return true;
-    }
-    
-    return false;
-  },
-});
+export const sentryErrorHandler = (error: any, _req: any, _res: any, next: any) => {
+  // Check if we should handle this error
+  const shouldHandle = error.status >= 500 || 
+                      error.status === 429 || 
+                      error.status === 413 || 
+                      (error instanceof BaseError && !error.isOperational);
+  
+  if (shouldHandle && config.monitoring?.sentryDsn) {
+    Sentry.captureException(error);
+  }
+  
+  next(error);
+};
 
 // Express request handler middleware
-export const sentryRequestHandler = Sentry.Handlers.requestHandler({
-  user: ['id', 'email', 'username', 'role'],
-  request: ['method', 'url', 'headers', 'query'],
-  serverName: false,
-  ip: true,
-});
-
-// Express tracing middleware
-export const sentryTracingHandler = Sentry.Handlers.tracingHandler();
+export const sentryRequestHandler = (req: any, _res: any, next: any) => {
+  // Set up Sentry scope for this request
+  Sentry.withScope((scope) => {
+    if (req.user) {
+      scope.setUser({
+        id: req.user.id,
+        email: req.user.email,
+        username: req.user.username,
+        role: req.user.role,
+      });
+    }
+    
+    scope.setContext('request', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      query: req.query,
+    });
+    
+    next();
+  });
+};
 
 // Middleware to add request ID to Sentry scope
 export const sentryRequestIdMiddleware = (req: any, _res: any, next: Function) => {
   if (req.id) {
-    Sentry.configureScope(scope => {
+    Sentry.withScope(scope => {
       scope.setTag('requestId', req.id);
     });
   }

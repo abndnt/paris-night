@@ -3,11 +3,11 @@ import fs from 'fs';
 import path from 'path';
 
 const testDbConfig = {
-  host: process.env.TEST_DB_HOST || 'localhost',
-  port: parseInt(process.env.TEST_DB_PORT || '5432'),
-  database: process.env.TEST_DB_NAME || 'flight_search_test',
-  user: process.env.TEST_DB_USER || 'test_user',
-  password: process.env.TEST_DB_PASSWORD || 'test_password',
+  host: process.env['TEST_DB_HOST'] || 'localhost',
+  port: parseInt(process.env['TEST_DB_PORT'] || '5432'),
+  database: process.env['TEST_DB_NAME'] || 'flight_search_test',
+  user: process.env['TEST_DB_USER'] || 'test_user',
+  password: process.env['TEST_DB_PASSWORD'] || 'test_password',
 };
 
 let testPool: Pool;

@@ -12,7 +12,7 @@ import { FlightResult } from '../models/FlightSearch';
 
 // Mock database connection (replace with actual connection in real usage)
 const mockDb = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/flight_search_dev'
+  connectionString: process.env['DATABASE_URL'] || 'postgresql://localhost:5432/flight_search_dev'
 });
 
 async function demonstratePreferences() {
@@ -171,7 +171,7 @@ async function demonstratePreferences() {
 
     console.log('✅ Results ranked by preference score:');
     filteredResults.results.forEach((flight, index) => {
-      console.log(`   ${index + 1}. ${flight.airline} ${flight.flightNumber} - ${flight.route[0].origin} to ${flight.route[flight.route.length - 1].destination}`);
+      console.log(`   ${index + 1}. ${flight.airline} ${flight.flightNumber} - ${flight.route[0]?.origin} to ${flight.route[flight.route.length - 1]?.destination}`);
       console.log(`      Price: $${flight.pricing.totalPrice}, Layovers: ${flight.layovers}`);
       console.log(`      Matches: Airline=${preferences.preferredAirlines.includes(flight.airline)}, Airport=${flight.route.some(r => preferences.preferredAirports.includes(r.origin) || preferences.preferredAirports.includes(r.destination))}`);
     });

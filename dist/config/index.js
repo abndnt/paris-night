@@ -67,6 +67,9 @@ exports.config = {
     logging: {
         level: process.env['LOG_LEVEL'] || 'info',
     },
+    monitoring: {
+        sentryDsn: process.env['SENTRY_DSN'] || null,
+    },
     llm: {
         baseUrl: process.env['REQUESTY_BASE_URL'] || 'https://router.requesty.ai/v1',
         apiKey: process.env['REQUESTY_API_KEY'] || 'your-requesty-api-key',

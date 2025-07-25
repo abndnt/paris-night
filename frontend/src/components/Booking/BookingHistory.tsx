@@ -97,7 +97,7 @@ const BookingHistory: React.FC = () => {
     return filtered;
   }, [bookings, filterStatus, sortBy]);
 
-  const getStatusCounts = () => {
+  const getStatusCounts = (): { all: number; [key: string]: number } => {
     const counts = bookings.reduce((acc, booking) => {
       acc[booking.status] = (acc[booking.status] || 0) + 1;
       return acc;

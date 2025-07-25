@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { redisClient } from '../config/database';
 import { config } from '../config';
-import { RateLimitError } from '../utils/errors';
+// import { RateLimitError } from '../utils/errors'; // Unused import
 import { loggers } from '../utils/logger';
 import { errorTracker } from '../utils/errorTracking';
 
@@ -34,10 +34,10 @@ export const createAdvancedRateLimit = (options: AdvancedRateLimitOptions) => {
     message = 'Too many requests, please try again later.',
     keyGenerator = (req: Request) => {
       // Use X-Forwarded-For if trustProxy is true, otherwise use req.ip
-      const ip = options.trustProxy && req.headers['x-forwarded-for'] 
-        ? (Array.isArray(req.headers['x-forwarded-for']) 
-            ? req.headers['x-forwarded-for'][0] 
-            : req.headers['x-forwarded-for'].split(',')[0].trim())
+      const ip = options.trustProxy && req.headers['x-forwarded-for']
+        ? (Array.isArray(req.headers['x-forwarded-for'])
+            ? req.headers['x-forwarded-for'][0]
+            : req.headers['x-forwarded-for']?.split(',')[0]?.trim())
         : req.ip;
       
       // Include user ID if authenticated for more precise rate limiting
@@ -64,25 +64,26 @@ export const createAdvancedRateLimit = (options: AdvancedRateLimitOptions) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Skip whitelisted IPs
-      const ip = trustProxy && req.headers['x-forwarded-for'] 
-        ? (Array.isArray(req.headers['x-forwarded-for']) 
-            ? req.headers['x-forwarded-for'][0] 
-            : req.headers['x-forwarded-for'].split(',')[0].trim())
-        : req.ip;
+      const ip = trustProxy && req.headers['x-forwarded-for']
+        ? (Array.isArray(req.headers['x-forwarded-for'])
+            ? req.headers['x-forwarded-for'][0]
+            : req.headers['x-forwarded-for']?.split(',')[0]?.trim())
+        : req.ip || 'unknown';
       
-      if (whitelist.includes(ip)) {
+      if (ip && whitelist.includes(ip)) {
         return next();
       }
       
       // Block blacklisted IPs immediately
-      if (blacklist.includes(ip)) {
+      if (ip && blacklist.includes(ip)) {
         loggers.security('Blocked blacklisted IP', { ip, url: req.originalUrl });
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             message: 'Access denied',
             code: 'BLACKLISTED',
           }
         });
+        return;
       }
       
       // Skip if custom skip function returns true
@@ -178,13 +179,14 @@ export const createAdvancedRateLimit = (options: AdvancedRateLimitOptions) => {
           res.setHeader('Retry-After', retryAfter);
         }
         
-        return res.status(429).json({
+        res.status(429).json({
           error: {
             message,
             code: 'RATE_LIMIT_EXCEEDED',
             retryAfter: `${retryAfter} seconds`,
           }
         });
+        return;
       }
 
       // Increment counter
@@ -261,7 +263,7 @@ export const apiRateLimit = createAdvancedRateLimit({
   trustProxy: true,
   keyGenerator: (req: Request) => {
     // Use API key if available, otherwise use IP
-    const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+    const apiKey = req.headers['x-api-key'] || req.query['apiKey'];
     const ip = req.ip || 'unknown';
     return `api_rate_limit:${apiKey || ip}`;
   },

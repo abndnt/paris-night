@@ -29,6 +29,9 @@ export declare const config: {
     logging: {
         level: string;
     };
+    monitoring: {
+        sentryDsn: string | null;
+    };
     llm: {
         baseUrl: string;
         apiKey: string;

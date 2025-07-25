@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AirlineAdapterFactory = void 0;
 const MockAirlineAdapter_1 = require("../adapters/MockAirlineAdapter");
+const AmadeusAdapter_1 = require("../adapters/AmadeusAdapter");
 const AirlineConfigManager_1 = require("../services/AirlineConfigManager");
 const AirlineRateLimiter_1 = require("../services/AirlineRateLimiter");
 const AirlineCache_1 = require("../services/AirlineCache");
@@ -45,7 +46,7 @@ class AirlineAdapterFactory {
         this.redisClient = options.redisClient;
         this.configManager = options.configManager || new AirlineConfigManager_1.AirlineConfigManager(options.encryptionKey);
         this.rateLimiter = new AirlineRateLimiter_1.AirlineRateLimiter(this.redisClient);
-        this.cache = new AirlineCache_1.AirlineCacheService(this.redisClient);
+        this.cache = new AirlineCache_1.AirlineCache(this.redisClient);
     }
     async createAdapter(airlineName, adapterType = 'mock') {
         const existingAdapter = this.adapters.get(airlineName);
@@ -60,8 +61,15 @@ class AirlineAdapterFactory {
                 adapter.name = airlineName;
                 break;
             case 'real':
-                adapter = new MockAirlineAdapter_1.MockAirlineAdapter(config, this.rateLimiter, this.cache);
-                adapter.name = airlineName;
+                switch (airlineName.toLowerCase()) {
+                    case 'amadeus':
+                        adapter = new AmadeusAdapter_1.AmadeusAdapter(config, this.rateLimiter, this.cache);
+                        break;
+                    default:
+                        adapter = new MockAirlineAdapter_1.MockAirlineAdapter(config, this.rateLimiter, this.cache);
+                        adapter.name = airlineName;
+                        break;
+                }
                 break;
             default:
                 throw new Error(`Unsupported adapter type: ${adapterType}`);

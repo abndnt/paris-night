@@ -11,7 +11,7 @@ import { errorHandler, notFoundHandler, requestIdMiddleware } from '../middlewar
 import { defaultAdvancedRateLimit, ddosProtection } from '../middleware/advancedRateLimit';
 import { createRouter } from '../routes';
 import { requestLoggerMiddleware, apiPerformanceMiddleware, apiPerformanceFinishMiddleware } from '../middleware/requestLogger';
-import { sentryRequestHandler, sentryTracingHandler, sentryErrorHandler, sentryRequestIdMiddleware } from '../utils/errorTracking';
+import { sentryRequestHandler, sentryErrorHandler, sentryRequestIdMiddleware } from '../utils/errorTracking';
 import { initializeErrorTracking } from '../utils/errorTracking';
 import { 
   securityHeadersMiddleware, 
@@ -37,7 +37,7 @@ export const createApp = (db: Pool, io?: SocketIOServer): express.Application =>
   // Sentry request handler (for error tracking)
   if (config.monitoring.sentryDsn) {
     app.use(sentryRequestHandler);
-    app.use(sentryTracingHandler);
+    // Sentry tracing is handled automatically by the new SDK
     app.use(sentryRequestIdMiddleware);
   }
 
@@ -90,7 +90,7 @@ export const createApp = (db: Pool, io?: SocketIOServer): express.Application =>
   // Request parsing middleware with validation
   app.use(express.json({ 
     limit: '1mb', // Reduced from 10mb for security
-    verify: (req, res, buf) => {
+    verify: (req, _res, buf) => {
       // Store raw body for signature verification (e.g., for webhooks)
       (req as any).rawBody = buf;
     }

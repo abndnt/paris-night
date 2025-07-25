@@ -36,7 +36,7 @@ export const auditLogger = winston.createLogger({
   defaultMeta: { 
     service: 'flight-search-saas-audit',
     environment: config.server.nodeEnv,
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env['npm_package_version'] || '1.0.0'
   },
   transports: [
     // Audit log file
@@ -193,13 +193,13 @@ export const createAuditEventFromRequest = (
   return {
     eventType,
     severity,
-    userId: user?.id,
-    username: user?.username,
-    userEmail: user?.email,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    requestId: (req as any).id,
-    details,
+    userId: user?.id || 'anonymous',
+    username: user?.username || 'anonymous',
+    userEmail: user?.email || 'unknown',
+    ip: req.ip || 'unknown',
+    userAgent: req.get('User-Agent') || 'unknown',
+    requestId: (req as any).id || 'unknown',
+    details: details || {},
   };
 };
 
@@ -226,7 +226,7 @@ export const auditMiddleware = (
       // Get resource info if provided
       const resourceInfo = getResourceInfo ? getResourceInfo(req) : {
         resourceType: req.path.split('/')[1] || 'unknown',
-        resourceId: req.params.id || 'unknown',
+        resourceId: req.params['id'] || 'unknown',
         action: req.method,
       };
       
@@ -234,16 +234,16 @@ export const auditMiddleware = (
       const auditEvent: AuditEvent = {
         eventType,
         severity,
-        userId: (req as any).user?.id,
-        username: (req as any).user?.username,
-        userEmail: (req as any).user?.email,
+        userId: (req as any).user?.id || 'anonymous',
+        username: (req as any).user?.username || 'anonymous',
+        userEmail: (req as any).user?.email || 'unknown',
         resourceType: resourceInfo.resourceType,
         resourceId: resourceInfo.resourceId,
         action: resourceInfo.action,
         status: res.statusCode < 400 ? 'success' : 'failure',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        requestId: (req as any).id,
+        ip: req.ip || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown',
+        requestId: (req as any).id || 'unknown',
         details: {
           method: req.method,
           path: req.path,
@@ -283,7 +283,7 @@ export const logAuthEvent = (
     status: success ? 'success' : 'failure',
     ip,
     userAgent,
-    details,
+    details: details || {},
   });
 };
 
@@ -311,7 +311,7 @@ export const logDataAccessEvent = (
     status: 'success',
     ip,
     userAgent,
-    details,
+    details: details || {},
   });
 };
 
@@ -337,7 +337,7 @@ export const logGdprEvent = (
     status: 'success',
     ip,
     userAgent,
-    details,
+    details: details || {},
   });
 };
 
@@ -387,12 +387,12 @@ export const logSecurityEvent = (
   logAuditEvent({
     eventType,
     severity,
-    userId,
+    userId: userId || 'anonymous',
     action: eventType.toString(),
     status: 'failure',
     ip,
     userAgent,
-    details,
+    details: details || {},
   });
 };
 
