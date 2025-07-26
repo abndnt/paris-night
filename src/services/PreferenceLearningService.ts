@@ -157,7 +157,7 @@ export class PreferenceLearningService {
   private learnAirportPreferences(
     bookingHistory: any[],
     searchHistory: any[],
-    currentPreferences: TravelPreferences | null
+    _currentPreferences: TravelPreferences | null
   ): { insights: LearningInsight[]; suggestions: string[] } {
     const airportFrequency: { [key: string]: number } = {};
     const insights: LearningInsight[] = [];

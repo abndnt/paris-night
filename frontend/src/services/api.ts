@@ -1,5 +1,5 @@
 // API service for frontend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 class ApiService {
   private baseURL: string;
@@ -22,14 +22,19 @@ class ApiService {
       ...options,
     };
 
+    console.log('API Request:', { url, method: config.method || 'GET', body: options.body });
+
     try {
       const response = await fetch(url, config);
+      console.log('API Response status:', response.status, response.statusText);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      console.log('API Response data:', data);
+      return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -43,6 +48,8 @@ class ApiService {
 
   // Flight search
   async searchFlights(searchCriteria: any) {
+    console.log('API Service: Making flight search request to:', `${this.baseURL}/flights/search`);
+    console.log('API Service: Search criteria:', searchCriteria);
     return this.request('/flights/search', {
       method: 'POST',
       body: JSON.stringify(searchCriteria),

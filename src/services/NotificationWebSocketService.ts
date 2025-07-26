@@ -149,13 +149,13 @@ export class NotificationWebSocketService {
    * Get users in notification rooms (for monitoring)
    */
   async getUsersInNotificationRooms(): Promise<{ [roomName: string]: number }> {
-    const rooms = await this.io.in('/').allRooms();
+    const rooms = this.io.sockets.adapter.rooms;
     const notificationRooms: { [roomName: string]: number } = {};
 
-    for (const room of rooms) {
-      if (room.startsWith('user:')) {
-        const sockets = await this.io.in(room).allSockets();
-        notificationRooms[room] = sockets.size;
+    for (const [roomName, _room] of rooms) {
+      if (roomName.startsWith('user:')) {
+        const sockets = await this.io.in(roomName).allSockets();
+        notificationRooms[roomName] = sockets.size;
       }
     }
 

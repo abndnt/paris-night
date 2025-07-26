@@ -4,6 +4,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { RootState } from '../../store/store';
 import { loginStart, loginSuccess, loginFailure } from '../../store/slices/authSlice';
 import { addNotification } from '../../store/slices/uiSlice';
+import api from '../../services/api';
+
+interface AuthResponse {
+  success: boolean;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+  token: string;
+  message?: string;
+}
 
 const LoginForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -36,32 +49,24 @@ const LoginForm: React.FC = () => {
     dispatch(loginStart());
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const data = await api.post<AuthResponse>('/auth/login', formData);
 
-      if (response.ok) {
-        const data = await response.json();
-        dispatch(loginSuccess({
-          user: data.user,
-          token: data.token,
-        }));
-        dispatch(addNotification({
-          type: 'success',
-          message: 'Login successful!',
-        }));
-        navigate('/');
-      } else {
-        const errorData = await response.json();
-        dispatch(loginFailure(errorData.message || 'Login failed'));
-      }
-    } catch (error) {
-      dispatch(loginFailure('Network error. Please try again.'));
+      dispatch(loginSuccess({
+        user: data.user,
+        token: data.token,
+      }));
+      dispatch(addNotification({
+        type: 'success',
+        message: 'Login successful!',
+      }));
+      navigate('/');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Network error. Please try again.';
+      dispatch(loginFailure(errorMessage));
+      dispatch(addNotification({
+        type: 'error',
+        message: errorMessage,
+      }));
     }
   };
 

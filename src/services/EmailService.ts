@@ -10,7 +10,7 @@ interface BasicEmailData {
 }
 
 export class EmailService {
-  private db?: Pool;
+  private db: Pool | undefined;
 
   constructor(db?: Pool) {
     this.db = db;
@@ -56,7 +56,7 @@ export class EmailService {
         to: emailData.to,
         subject,
         html: htmlContent,
-        text: textContent
+        text: textContent || ''
       });
 
       logger.info(`Templated email sent to ${emailData.to} using template ${emailData.template}`);
@@ -72,6 +72,11 @@ export class EmailService {
    */
   async sendBasicEmail(emailData: BasicEmailData): Promise<void> {
     try {
+      // Validate email address
+      if (!this.isValidEmail(emailData.to)) {
+        throw new Error(`Invalid email address: ${emailData.to}`);
+      }
+
       // In a real implementation, this would integrate with an email service
       // like SendGrid, AWS SES, Mailgun, etc.
       

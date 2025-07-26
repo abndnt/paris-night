@@ -9,7 +9,7 @@ import {
   AnalyticsDashboardData,
   AnalyticsQueryParams
 } from '../models/Analytics';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Service for tracking and retrieving analytics data

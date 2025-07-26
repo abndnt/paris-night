@@ -380,7 +380,7 @@ export class ReceiptService {
   ): Promise<string> {
     // In a real implementation, this would use a PDF generation library like Puppeteer or PDFKit
     // For now, return a mock PDF URL
-    const htmlContent = await this.generateHTMLReceipt(receipt, booking, options);
+    // const htmlContent = await this.generateHTMLReceipt(receipt, booking, options); // Unused variable
     
     // Mock PDF generation - would convert HTML to PDF
     const pdfUrl = `https://receipts.flightsearch.com/pdf/${receipt.receiptNumber}.pdf`;
@@ -510,7 +510,7 @@ export class ReceiptService {
   /**
    * Format payment method for display
    */
-  private formatPaymentMethod(paymentMethod: PaymentReceipt['paymentMethod'], language: string = 'en'): string {
+  private formatPaymentMethod(paymentMethod: PaymentReceipt['paymentMethod'], _language: string = 'en'): string {
     switch (paymentMethod.type) {
       case 'credit_card':
         return `Credit Card ending in ${paymentMethod.creditCard?.last4 || '****'}`;

@@ -27,9 +27,9 @@ const Home: React.FC = () => {
             <p className="text-gray-600">
               Ready to find your next adventure?
             </p>
-            <button className="btn-primary text-lg px-8 py-3">
+            <Link to="/search" className="btn-primary text-lg px-8 py-3 inline-block">
               Start Searching Flights
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="space-x-4">

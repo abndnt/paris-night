@@ -1,4 +1,4 @@
-import { FlightResult, FlightSegment, SearchCriteria } from '../models/FlightSearch';
+import { FlightResult, SearchCriteria } from '../models/FlightSearch';
 import { logger } from '../utils/logger';
 
 export interface PowerUserFilters {
@@ -319,7 +319,7 @@ export class AdvancedSearchFilters {
       suggestions.push('No direct flights available. Try allowing 1 stop.');
     }
 
-    if (filters.maxTotalTravelTime && removedByFilter['maxTravelTime'] > originalCount * 0.5) {
+    if (filters.maxTotalTravelTime && (removedByFilter['maxTravelTime'] || 0) > originalCount * 0.5) {
       suggestions.push('Travel time constraint removed many options. Consider increasing limit.');
     }
 
@@ -588,7 +588,7 @@ export class AdvancedSearchFilters {
    * Generate filter recommendations based on search criteria
    */
   generateFilterRecommendations(
-    searchCriteria: SearchCriteria,
+    _searchCriteria: SearchCriteria,
     flights: FlightResult[]
   ): string[] {
     const recommendations: string[] = [];

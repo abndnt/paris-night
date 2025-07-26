@@ -9,6 +9,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "dev:simple": "node scripts/start-simple.js",
     "dev:simple:direct": "ts-node-dev --respawn --transpile-only src/server.simple.ts",
+    "dev:minimal": "ts-node-dev --respawn --transpile-only src/server.dev.ts",
     "setup": "node scripts/setup-development.js",
     "setup:env": "node scripts/setup-env.js",
     "test": "jest",

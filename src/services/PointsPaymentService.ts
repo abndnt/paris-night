@@ -2,14 +2,14 @@ import { Pool } from 'pg';
 import { 
   PaymentIntent, 
   PaymentTransaction, 
-  PaymentStatus,
+  // PaymentStatus, // Unused import
   CreatePaymentIntentRequest,
   ConfirmPaymentRequest,
   RefundPaymentRequest,
   PointsPaymentInfo
 } from '../models/Payment';
 import { PointsService } from './PointsService';
-import { RewardAccount } from '../models/RewardProgram';
+// import { RewardAccount } from '../models/RewardProgram'; // Unused import
 
 export interface PointsPaymentResult {
   success: boolean;
@@ -98,7 +98,7 @@ export class PointsPaymentService {
   /**
    * Confirm points payment
    */
-  async confirmPointsPayment(request: ConfirmPaymentRequest, paymentIntent: PaymentIntent): Promise<PointsPaymentResult> {
+  async confirmPointsPayment(_request: ConfirmPaymentRequest, paymentIntent: PaymentIntent): Promise<PointsPaymentResult> {
     try {
       if (!paymentIntent.paymentMethod.pointsUsed) {
         throw new Error('No points payment information found');
@@ -323,7 +323,7 @@ export class PointsPaymentService {
   private async handlePointsTransfer(
     userId: string,
     transferDetails: PointsPaymentInfo['transferDetails'],
-    client: any
+    _client: any
   ): Promise<PointsTransferResult> {
     try {
       if (!transferDetails) {

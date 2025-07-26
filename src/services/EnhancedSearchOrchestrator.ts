@@ -114,8 +114,8 @@ export class EnhancedSearchOrchestrator extends FlightSearchOrchestrator {
         searchData,
         options.airlines,
         {
-          includeNearbyAirports: options.includeNearbyAirports,
-          flexibleDates: options.flexibleDates,
+          includeNearbyAirports: options.includeNearbyAirports || false,
+          flexibleDates: options.flexibleDates || false,
           sortBy: 'price',
           sortOrder: 'asc'
         }

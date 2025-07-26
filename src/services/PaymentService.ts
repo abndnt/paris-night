@@ -3,7 +3,7 @@ import {
   PaymentIntent, 
   PaymentTransaction, 
   PaymentReceipt,
-  PaymentStatus,
+  // PaymentStatus, // Unused import
   CreatePaymentIntentRequest,
   ConfirmPaymentRequest,
   RefundPaymentRequest,

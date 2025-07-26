@@ -45,10 +45,10 @@ export interface SearchResult {
 }
 
 export class FlightSearchOrchestrator {
-  private searchService: SearchService;
-  private adapterFactory: AirlineAdapterFactory;
-  private redisClient: RedisClientType;
-  private socketIO: SocketIOServer | undefined;
+  protected searchService: SearchService;
+  protected adapterFactory: AirlineAdapterFactory;
+  protected redisClient: RedisClientType;
+  protected socketIO: SocketIOServer | undefined;
   private activeSearches: Map<string, SearchProgress> = new Map();
   private options: Required<SearchOrchestrationOptions>;
 

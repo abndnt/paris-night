@@ -50,7 +50,6 @@ export interface HealthCheckResponse {
  */
 export class HealthCheckService {
   private serviceHealthCache: Record<string, ServiceHealth> = {};
-  private lastFullCheck: Date = new Date(0); // Initialize to epoch
   private readonly cacheValidityMs = 30000; // Cache health results for 30 seconds
 
   /**
@@ -64,7 +63,7 @@ export class HealthCheckService {
     const memoryUsage = process.memoryUsage();
     
     return {
-      cpuUsage: os.loadavg()[0], // 1 minute load average
+      cpuUsage: os.loadavg()[0] || 0, // 1 minute load average
       memoryUsage: {
         total: totalMemory,
         free: freeMemory,
@@ -137,7 +136,7 @@ export class HealthCheckService {
       
       infoLines.forEach(line => {
         const parts = line.split(':');
-        if (parts.length === 2) {
+        if (parts.length === 2 && parts[0] && parts[1]) {
           metrics[parts[0]] = parts[1];
         }
       });
@@ -225,7 +224,7 @@ export class HealthCheckService {
       
       return {
         status: healthResult.status === 'healthy' ? 'healthy' : 'degraded',
-        details: healthResult.details,
+        details: healthResult.details || {},
         lastChecked: new Date()
       };
     } catch (error) {
@@ -259,7 +258,10 @@ export class HealthCheckService {
   private async getServiceHealth(service: string): Promise<ServiceHealth> {
     // Return cached result if valid
     if (this.isHealthResultValid(service)) {
-      return this.serviceHealthCache[service];
+      const cached = this.serviceHealthCache[service];
+      if (cached) {
+        return cached;
+      }
     }
     
     // Otherwise perform a fresh check
@@ -299,10 +301,10 @@ export class HealthCheckService {
     const services: Record<string, ServiceHealth> = {};
     
     // Check all core services
-    services.database = await this.getServiceHealth('database');
-    services.redis = await this.getServiceHealth('redis');
-    services.disk = await this.getServiceHealth('disk');
-    services.errorTracking = await this.getServiceHealth('errorTracking');
+    services['database'] = await this.getServiceHealth('database');
+    services['redis'] = await this.getServiceHealth('redis');
+    services['disk'] = await this.getServiceHealth('disk');
+    services['errorTracking'] = await this.getServiceHealth('errorTracking');
     
     // Determine overall status (healthy only if all services are healthy)
     let status: HealthStatus = 'healthy';
@@ -310,10 +312,10 @@ export class HealthCheckService {
     for (const serviceKey in services) {
       const serviceHealth = services[serviceKey];
       
-      if (serviceHealth.status === 'unhealthy') {
+      if (serviceHealth && serviceHealth.status === 'unhealthy') {
         status = 'unhealthy';
         break;
-      } else if (serviceHealth.status === 'degraded' && status === 'healthy') {
+      } else if (serviceHealth && serviceHealth.status === 'degraded' && status === 'healthy') {
         status = 'degraded';
       }
     }
@@ -321,7 +323,7 @@ export class HealthCheckService {
     // Create response
     const response: HealthCheckResponse = {
       status,
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env['npm_package_version'] || '1.0.0',
       environment: config.server.nodeEnv,
       timestamp: now,
       uptime: process.uptime(),
@@ -333,7 +335,7 @@ export class HealthCheckService {
       response.systemMetrics = this.getSystemMetrics();
     }
     
-    this.lastFullCheck = now;
+    // this.lastFullCheck = now; // Removed unused property
     return response;
   }
 

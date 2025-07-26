@@ -13,7 +13,7 @@ import { logger } from '../utils/logger';
 
 export class NotificationService {
   private db: Pool;
-  private io?: SocketIOServer;
+  private io: SocketIOServer | undefined;
   private emailService: EmailService;
 
   constructor(db: Pool, io?: SocketIOServer) {
@@ -177,7 +177,7 @@ export class NotificationService {
         userId: notification.userId,
         title: notification.title,
         body: notification.message,
-        data: notification.data
+        data: notification.data || {}
       };
 
       logger.debug('Push notification data:', pushData);

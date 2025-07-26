@@ -1,5 +1,5 @@
 import { TravelPreferences } from '../models/TravelPreferences';
-import { FlightResult, FlightSegment } from '../models/FlightSearch';
+import { FlightResult } from '../models/FlightSearch';
 
 export interface FilteredSearchResults {
   results: FlightResult[];

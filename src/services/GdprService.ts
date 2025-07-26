@@ -1,11 +1,9 @@
 import { Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logGdprEvent, AuditEventType } from '../utils/auditLogger';
-import { loggers } from '../utils/logger';
+import { logger, loggers } from '../utils/logger';
 import { errorTracker } from '../utils/errorTracking';
-import { config } from '../config';
 import { redisClient } from '../config/database';
-import { maskSensitiveData } from '../utils/security';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
 /**
@@ -324,7 +322,7 @@ export class GdprService {
     // 6. Delete chat history in the chat service
     // 7. Delete data in any other services that store user data
     
-    loggers.info(`Deleting user data for user ${userId}`);
+    logger.info(`Deleting user data for user ${userId}`);
     
     // Simulate deletion delay
     await new Promise(resolve => setTimeout(resolve, 1000));

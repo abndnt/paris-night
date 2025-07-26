@@ -1,3 +1,4 @@
+export { default as FlightSearchForm } from './FlightSearchForm';
 export { default as SearchResultsContainer } from './SearchResultsContainer';
 export { default as SearchResultsList } from './SearchResultsList';
 export { default as FlightResultCard } from './FlightResultCard';

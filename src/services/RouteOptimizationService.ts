@@ -1,4 +1,4 @@
-import { SearchCriteria, FlightResult, FlightSegment } from '../models/FlightSearch';
+import { SearchCriteria, FlightResult } from '../models/FlightSearch';
 import { logger } from '../utils/logger';
 
 export interface MultiCitySearchCriteria {
@@ -225,7 +225,7 @@ export class RouteOptimizationService {
    * Find stopover opportunities
    */
   async findStopoverOptions(
-    searchCriteria: SearchCriteria,
+    _searchCriteria: SearchCriteria,
     availableFlights: FlightResult[],
     maxStopoverHours: number
   ): Promise<StopoverOption[]> {
@@ -442,7 +442,7 @@ export class RouteOptimizationService {
   /**
    * Get nearby airports within specified distance
    */
-  private getNearbyAirports(airportCode: string, maxDistanceMiles: number): string[] {
+  private getNearbyAirports(airportCode: string, _maxDistanceMiles: number): string[] {
     // This would typically query a database of airport distances
     // For now, return some common nearby airports for major hubs
     const nearbyMap: Record<string, string[]> = {
@@ -465,7 +465,7 @@ export class RouteOptimizationService {
   private findBestPositioningFlight(
     origin: string,
     destination: string,
-    departureDate: Date,
+    _departureDate: Date,
     availableFlights: FlightResult[]
   ): FlightResult | null {
     const positioningFlights = availableFlights.filter(flight =>
@@ -486,7 +486,7 @@ export class RouteOptimizationService {
   private findBestMainFlight(
     origin: string,
     destination: string,
-    searchCriteria: SearchCriteria,
+    _searchCriteria: SearchCriteria,
     availableFlights: FlightResult[]
   ): FlightResult | null {
     const mainFlights = availableFlights.filter(flight =>
@@ -695,7 +695,7 @@ export class RouteOptimizationService {
   /**
    * Calculate score for individual segment
    */
-  private calculateSegmentScore(flight: FlightResult, criteria: MultiCitySearchCriteria): number {
+  private calculateSegmentScore(flight: FlightResult, _criteria: MultiCitySearchCriteria): number {
     let score = 100;
     
     // Price factor (lower is better)
@@ -715,7 +715,7 @@ export class RouteOptimizationService {
    */
   private calculateMultiCityScore(
     segments: FlightResult[],
-    criteria: MultiCitySearchCriteria
+    _criteria: MultiCitySearchCriteria
   ): number {
     let score = 70; // Base score for multi-city
     

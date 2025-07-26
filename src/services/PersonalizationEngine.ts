@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { TravelPreferences, TravelPreferencesModel } from '../models/TravelPreferences';
-import { FlightResult } from '../models/FlightSearch';
+// import { FlightResult } from '../models/FlightSearch'; // Unused import
 import { PreferenceFilterService } from './PreferenceFilterService';
 
 export interface PersonalizedRecommendation {
@@ -229,7 +229,7 @@ export class PersonalizationEngine {
    */
   private async generateDealRecommendations(behaviorData: UserBehaviorData): Promise<PersonalizedRecommendation[]> {
     const recommendations: PersonalizedRecommendation[] = [];
-    const { preferences, searchHistory } = behaviorData;
+    const { preferences } = behaviorData;
 
     // Recommend deals for preferred airports
     if (preferences?.preferredAirports.length) {

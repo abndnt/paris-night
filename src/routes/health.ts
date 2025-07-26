@@ -10,7 +10,7 @@ const router = Router();
  * GET /health
  */
 router.get('/health', asyncHandler(async (req: Request, res: Response) => {
-  const includeMetrics = req.query.metrics === 'true';
+  const includeMetrics = req.query['metrics'] === 'true';
   const startTime = Date.now();
   
   try {
@@ -95,7 +95,7 @@ router.get('/health/:service', asyncHandler(async (req: Request, res: Response) 
   const { service } = req.params;
   const validServices = ['database', 'redis', 'disk', 'errorTracking'];
   
-  if (!validServices.includes(service)) {
+  if (!service || !validServices.includes(service)) {
     return res.status(400).json({
       error: `Invalid service: ${service}. Valid services are: ${validServices.join(', ')}`
     });
@@ -111,17 +111,17 @@ router.get('/health/:service', asyncHandler(async (req: Request, res: Response) 
     }
     
     const serviceHealth = health.services[service];
-    const statusCode = serviceHealth.status === 'healthy' ? 200 : 
-                       serviceHealth.status === 'degraded' ? 207 : 503;
+    const statusCode = serviceHealth && serviceHealth.status === 'healthy' ? 200 : 
+                       serviceHealth && serviceHealth.status === 'degraded' ? 207 : 503;
     
-    res.status(statusCode).json({
+    return res.status(statusCode).json({
       service,
       ...serviceHealth
     });
   } catch (error) {
     logger.error(`Health check for service ${service} failed`, error as Error);
     
-    res.status(500).json({
+    return res.status(500).json({
       service,
       status: 'error',
       timestamp: new Date(),

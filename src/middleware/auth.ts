@@ -10,7 +10,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const authenticateToken = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
@@ -28,15 +28,24 @@ export const authenticateToken = (
       email: string;
     };
     
-    req.user = decoded;
+    (req as AuthenticatedRequest).user = decoded;
     next();
   } catch (error) {
     res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
 
+// Type-safe wrapper for authenticated routes
+export const withAuth = <T extends AuthenticatedRequest>(
+  handler: (req: T, res: Response) => Promise<Response | void>
+) => {
+  return async (req: Request, res: Response): Promise<Response | void> => {
+    return handler(req as T, res);
+  };
+};
+
 export const optionalAuth = (
-  req: AuthenticatedRequest,
+  req: Request,
   _res: Response,
   next: NextFunction
 ): void => {
@@ -49,7 +58,7 @@ export const optionalAuth = (
         id: string;
         email: string;
       };
-      req.user = decoded;
+      (req as AuthenticatedRequest).user = decoded;
     } catch (error) {
       // Token is invalid, but we continue without authentication
       console.warn('Invalid token provided, continuing without auth');

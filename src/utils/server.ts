@@ -45,10 +45,10 @@ const startServer = async (): Promise<void> => {
     );
     
     // Initialize Search WebSocket Service
-    const searchWebSocketService = new SearchWebSocketService(
-      chatService.getIO(),
-      searchOrchestrator
-    );
+    // const searchWebSocketService = new SearchWebSocketService(
+    //   chatService.getIO(),
+    //   searchOrchestrator
+    // );
 
     // Start HTTP server
     server.listen(config.server.port, config.server.host, () => {

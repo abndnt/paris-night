@@ -1,7 +1,7 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { gdprService } from '../services/GdprService';
-import { validateRequest, commonValidationSchemas } from '../middleware/enhancedValidation';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { validateRequest } from '../middleware/enhancedValidation';
+import { authenticate as authMiddleware } from '../middleware/authMiddleware';
 import { asyncHandler } from '../middleware/errorHandler';
 import { auditMiddleware } from '../utils/auditLogger';
 import { AuditEventType, AuditEventSeverity } from '../utils/auditLogger';
@@ -113,7 +113,7 @@ router.get(
   validateRequest({ params: requestStatusSchema }),
   asyncHandler(async (req: Request, res: Response) => {
     const { requestId } = req.params;
-    const requestStatus = await gdprService.getRequestStatus(requestId);
+    const requestStatus = await gdprService.getRequestStatus(requestId!);
     
     res.json({
       success: true,
